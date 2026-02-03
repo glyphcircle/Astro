@@ -1,0 +1,8 @@
+// 1. Run this in your browser console to check if supabase is globally available via your service:
+import { dbService } from './services/db';
+const test = await dbService.updateEntry('services', 'palmistry', { name: 'AI Palmistry TEST' });
+console.log('Test Result:', test);
+
+// 2. Expected Output:
+// 🚩 HIT updateEntry: {table:'services', id:'palmistry', ...}
+// ✅ [DB] Update successful: [...]

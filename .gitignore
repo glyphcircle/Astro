@@ -1,0 +1,56 @@
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+*.local
+secrets.json
+
+# Dependencies
+node_modules/
+jspm_packages/
+
+# Build & Distribution
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+/coverage
+/.nyc_output
+
+# Temporary Files
+*.tmp
+*.bak
+
+# PWA Assets
+/public/icons/
+/public/manifest.json
+
+# Cache
+.eslintcache
+.stylelintcache
+.vite/
+.turbo/
+supabase_master_seed.sql
