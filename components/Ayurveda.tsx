@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 // @ts-ignore
 import { Link } from 'react-router-dom';
@@ -133,6 +132,7 @@ const Ayurveda: React.FC = () => {
                     ) : (
                         <FullReport 
                             reading={result.fullReading} 
+                            category="ayurveda"
                             title={`Ayurvedic Analysis: ${result.dosha}`} 
                             imageUrl={cloudManager.resolveImage("https://images.unsplash.com/photo-1540553016722-983e48a2cd10?q=80&w=800")} 
                         />

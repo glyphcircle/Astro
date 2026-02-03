@@ -31,6 +31,29 @@ export interface Reading {
   meta_data?: any;
 }
 
+export interface ReportTemplate {
+  id: number;
+  template_name: string;
+  template_code: string;
+  template_image_url: string;
+  thumbnail_url: string | null;
+  description: string;
+  category: string;
+  is_active: boolean;
+  is_default: boolean;
+  is_premium: boolean;
+  display_order: number;
+  content_area_config: {
+    marginTop: number;
+    marginBottom: number;
+    marginLeft: number;
+    marginRight: number;
+    textColor: string;
+    fontFamily: string;
+    backgroundColor: string;
+  };
+}
+
 export class SupabaseDatabase {
   async getAll(table: string) {
     console.log(`📡 [DB] Fetching all from: ${table}`);
@@ -40,10 +63,39 @@ export class SupabaseDatabase {
     return data || [];
   }
 
+  async getRandomTemplate(category: string): Promise<ReportTemplate | null> {
+    try {
+      // First try to find a category specific template
+      const { data, error } = await supabase
+        .from('report_formats')
+        .select('*')
+        .eq('is_active', true)
+        .eq('category', category);
+
+      if (error) throw error;
+      
+      const templates = data || [];
+      if (templates.length > 0) {
+        return templates[Math.floor(Math.random() * templates.length)];
+      }
+
+      // Fallback to a default template if no category match
+      const { data: defaultData } = await supabase
+        .from('report_formats')
+        .select('*')
+        .eq('is_active', true)
+        .eq('is_default', true)
+        .maybeSingle();
+
+      return defaultData;
+    } catch (err) {
+      console.error('❌ [DB] Template fetch failed:', err);
+      return null;
+    }
+  }
+
   async updateEntry(table: string, id: string | number, updates: any) {
     console.log('📡 [DB] PATCH START', { tableName: table, id, updatesKeys: Object.keys(updates) });
-    console.log('📦 [DB] Full Updates Payload:', JSON.stringify(updates, null, 2)); // 🆕 ADD THIS
-
     if (!supabase) {
       console.error('❌ CRITICAL: supabase UNDEFINED');
       throw new Error('Supabase missing');
@@ -56,76 +108,35 @@ export class SupabaseDatabase {
         .eq('id', id)
         .select();
 
-      console.log('📊 [DB] Supabase Response:', { data, error }); // 🆕 ADD THIS
-
-      if (error) {
-        console.error('🚨 [DB] RLS ERROR:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
-        throw error;
-      }
-
-      if (!data || data.length === 0) {
-        console.error('⚠️ [DB] NO DATA RETURNED after update'); // 🆕 ADD THIS
-        throw new Error(`No records updated for ID: ${id}`);
-      }
-
-      console.log('✅ [DB] PATCH SUCCESS:', data[0]); // 🆕 SHOW FULL RETURNED DATA
+      if (error) throw error;
       return data;
-
     } catch (error: any) {
       console.error('💥 [DB] PATCH FAILED:', error.message || error);
       throw error;
     }
   }
 
-
   async createEntry(table: string, payload: any) {
-    console.log('📡 [DB] CREATE START', { tableName: table, payloadKeys: Object.keys(payload) })
-
-    if (!supabase) {
-      console.error('CRITICAL: supabase object is UNDEFINED')
-      throw new Error('Supabase client failed to initialize.')
-    }
-
+    if (!supabase) throw new Error('Supabase missing');
     const { data, error } = await supabase
       .from(table)
       .insert([payload])
-      .select()
+      .select();
 
-    if (error) {
-      console.error('DB Create Error:', error.message)
-      throw error
-    }
-
-    console.log('✅ [DB] Create Successful:', data)
-    return data
+    if (error) throw error;
+    return data;
   }
 
   async deleteEntry(table: string, id: any) {
-    console.log('🗑️ [DB] DELETE START', { tableName: table, id })
-
-    if (!supabase) {
-      console.error('Supabase missing')
-      throw new Error('Supabase missing')
-    }
-
+    if (!supabase) throw new Error('Supabase missing');
     const { data, error } = await supabase
       .from(table)
       .delete()
       .eq('id', id)
-      .select()
+      .select();
 
-    if (error) {
-      console.error('DB Delete Error:', error.message)
-      throw error
-    }
-
-    console.log('✅ [DB] Delete Successful for', id)
-    return { success: true, deleted: data }
+    if (error) throw error;
+    return { success: true, deleted: data };
   }
 
   async checkIsAdmin(): Promise<boolean> {
@@ -143,9 +154,6 @@ export class SupabaseDatabase {
 
   async getStartupBundle() {
     try {
-      console.log('📦 [DB] Fetching startup bundle...');
-
-      // Fetch all critical tables in parallel to prevent 409 errors in UI
       const [servicesRes, configRes, providersRes, itemsRes, assetsRes, formatsRes] = await Promise.all([
         supabase.from('services').select('*'),
         supabase.from('config').select('*'),
@@ -154,8 +162,6 @@ export class SupabaseDatabase {
         supabase.from('image_assets').select('*'),
         supabase.from('report_formats').select('*')
       ]);
-
-      if (servicesRes.error) throw servicesRes.error;
 
       return {
         services: servicesRes.data || [],
@@ -166,11 +172,9 @@ export class SupabaseDatabase {
         report_formats: formatsRes.data || []
       };
     } catch (err) {
-      console.warn('⚠️ [DB] Startup bundle failed, falling back to individual calls');
       return null;
     }
   }
-
 
   async getConfigValue(key: string): Promise<string | null> {
     if (!supabase) return null;
@@ -178,19 +182,12 @@ export class SupabaseDatabase {
     return data?.value || null;
   }
 
-  // Fix: Added invokeBatchUpdate method to fix Property 'invokeBatchUpdate' does not exist error in AdminBatchEditor.tsx
   async invokeBatchUpdate(table: string, updates: any[]) {
-    console.log(`📡 [DB] Invoking Batch Update for: ${table}`);
     if (!supabase) throw new Error("Supabase is not defined.");
-    
     const { data, error } = await supabase.functions.invoke('admin-batch-update', {
       body: { target_table: table, updates }
     });
-
-    if (error) {
-      console.error('🚨 [DB] Batch Update Error:', error);
-      throw error;
-    }
+    if (error) throw error;
     return data;
   }
 

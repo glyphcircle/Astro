@@ -26,7 +26,9 @@ const Palmistry: React.FC = () => {
   
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLDivElement>(null);
+  // Fix: videoRef was incorrectly typed or used, we need an actual video element for camera
+  const cameraRef = useRef<HTMLVideoElement>(null);
   const prevLangRef = useRef('');
 
   const { t, language } = useTranslation();
@@ -68,7 +70,7 @@ const Palmistry: React.FC = () => {
   }, [cameraStream]);
 
   useEffect(() => {
-    if (isCameraOpen && videoRef.current && cameraStream) { videoRef.current.srcObject = cameraStream; }
+    if (isCameraOpen && cameraRef.current && cameraStream) { cameraRef.current.srcObject = cameraStream; }
   }, [isCameraOpen, cameraStream]);
 
   const handleStartCamera = async () => {
@@ -82,11 +84,11 @@ const Palmistry: React.FC = () => {
   const handleStopCamera = () => { if (cameraStream) cameraStream.getTracks().forEach(track => track.stop()); setCameraStream(null); setIsCameraOpen(false); };
 
   const handleCapture = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas'); canvas.width = videoRef.current.videoWidth; canvas.height = videoRef.current.videoHeight;
+    if (cameraRef.current) {
+      const canvas = document.createElement('canvas'); canvas.width = cameraRef.current.videoWidth; canvas.height = cameraRef.current.videoHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0);
+        ctx.drawImage(cameraRef.current, 0, 0);
         canvas.toBlob((blob) => {
           if (blob) {
             const file = new File([blob], "palm_capture.jpg", { type: "image/jpeg" });
@@ -145,7 +147,7 @@ const Palmistry: React.FC = () => {
               <div className="w-full max-w-md">
                 {isCameraOpen ? (
                     <div className="w-full relative bg-black rounded-lg overflow-hidden border-2 border-amber-500 shadow-xl">
-                        <video ref={videoRef} autoPlay playsInline muted className="w-full h-64 object-cover" />
+                        <video ref={cameraRef} autoPlay playsInline muted className="w-full h-64 object-cover" />
                         <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 z-10"><button onClick={handleStopCamera} className="bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-full backdrop-blur-sm">✕</button><button onClick={handleCapture} className="bg-white/90 hover:bg-white text-black p-4 rounded-full shadow-lg backdrop-blur-sm border-4 border-amber-500/50 transform active:scale-95 transition-transform"><div className="w-4 h-4 bg-red-600 rounded-full"></div></button></div>
                     </div>
                 ) : (
@@ -169,7 +171,7 @@ const Palmistry: React.FC = () => {
                                <div className="space-y-2 mb-6 font-lora text-amber-100/90 text-sm italic">{readingText.split('\n').slice(0, 4).map((line, i) => <p key={i}>{line}</p>)}</div>
                                <div className="flex flex-col gap-2"><Button onClick={handleReadMore} className="w-full bg-gradient-to-r from-amber-600 to-maroon-700 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.4)]">{t('readMore')}</Button>{isAdmin && <button onClick={() => setIsPaid(true)} className="text-xs text-amber-500 hover:text-amber-300 underline font-mono text-center">👑 Admin Access</button>}</div>
                            </Card>
-                       ) : <FullReport reading={readingText} title={t('aiPalmReading')} imageUrl={cloudManager.resolveImage(reportImage)} />}
+                       ) : <FullReport reading={readingText} category="palmistry" title={t('aiPalmReading')} imageUrl={cloudManager.resolveImage(reportImage)} />}
                    </div>
                 )}
               </div>

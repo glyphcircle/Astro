@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 // @ts-ignore
 import { Link } from 'react-router-dom';
@@ -315,7 +314,7 @@ const FaceReading: React.FC = () => {
                                </div>
                             </Card>
                         ) : (
-                            <FullReport reading={reading} title={t('aiFaceReading')} imageUrl={cloudManager.resolveImage(reportImage)} />
+                            <FullReport reading={reading} category="face-reading" title={t('aiFaceReading')} imageUrl={cloudManager.resolveImage(reportImage)} />
                         )}
                    </div>
                 )}

@@ -48,6 +48,12 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
     }
   };
 
+  const safeRender = (val: any) => {
+    if (typeof val === 'string' || typeof val === 'number') return val;
+    if (val && typeof val === 'object' && val.text) return val.text;
+    return '';
+  };
+
   return (
     <div className="w-full flex flex-col items-center">
       {/* 📜 REPORT PREVIEW CONTAINER */}
@@ -69,7 +75,7 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
           <h2 className="text-5xl md:text-6xl font-cinzel font-black gold-gradient-text uppercase tracking-tighter mb-4">Imperial Birth Decree</h2>
           <p className="text-[#8b4513] uppercase tracking-[0.4em] font-bold text-xs font-cinzel">Authorized by the Sovereign Registry</p>
           <div className="mt-4 text-[#4a0404] font-lora italic text-lg">
-            Calculated for: <span className="font-black not-italic text-2xl">{report.birthDetails?.name}</span>
+            Calculated for: <span className="font-black not-italic text-2xl">{safeRender(report.birthDetails?.name)}</span>
           </div>
         </div>
 
@@ -84,7 +90,7 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
             <Card key={i} className="p-6 bg-white/60 border-[#d4af37]/20 text-center shadow-sm hover:shadow-md transition-shadow">
               <span className="text-3xl block mb-2">{item.icon}</span>
               <span className="text-[10px] text-[#8b4513] uppercase font-black tracking-widest">{item.label}</span>
-              <p className="text-[#4a0404] font-cinzel font-bold mt-1 truncate text-lg">{item.value}</p>
+              <p className="text-[#4a0404] font-cinzel font-bold mt-1 truncate text-lg">{safeRender(item.value)}</p>
             </Card>
           ))}
         </div>
@@ -108,15 +114,15 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
               <tbody className="divide-y divide-[#d4af37]/10 text-[#1a1a1a]">
                 {report.planetaryPositions?.map((p: any, i: number) => (
                   <tr key={i} className="hover:bg-[#d4af37]/5 transition-colors">
-                    <td className="p-4 text-[#4a0404] font-black">{p.planet} {p.isRetrograde ? '℞' : ''}</td>
-                    <td className="p-4 font-medium">{p.sign}</td>
-                    <td className="p-4 font-mono text-xs">{p.degree}</td>
-                    <td className="p-4 font-black">{p.house}</td>
+                    <td className="p-4 text-[#4a0404] font-black">{safeRender(p.planet)} {p.isRetrograde ? '℞' : ''}</td>
+                    <td className="p-4 font-medium">{safeRender(p.sign)}</td>
+                    <td className="p-4 font-mono text-xs">{safeRender(p.degree)}</td>
+                    <td className="p-4 font-black">{safeRender(p.house)}</td>
                     <td className="p-4">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
                         p.strength?.toLowerCase().includes('excellent') ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}>
-                        {p.strength}
+                        {safeRender(p.strength)}
                       </span>
                     </td>
                   </tr>
@@ -134,10 +140,10 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
               <Card key={i} className="p-10 bg-white/40 border-l-[6px] border-[#d4af37] flex flex-col gap-4 shadow-sm hover:shadow-xl transition-all">
                 <div className="flex justify-between items-start">
                   <span className="text-6xl opacity-10 font-cinzel font-black text-[#4a0404]">{h.house}</span>
-                  <span className="text-xs text-[#8b4513] font-black uppercase tracking-[0.2em] bg-[#d4af37]/10 px-3 py-1 rounded-full">{h.significance}</span>
+                  <span className="text-xs text-[#8b4513] font-black uppercase tracking-[0.2em] bg-[#d4af37]/10 px-3 py-1 rounded-full">{safeRender(h.significance)}</span>
                 </div>
-                <div className="text-[#8b4513] text-[10px] font-black uppercase tracking-widest mb-1">Sign: {h.sign} • Lord: {h.lord}</div>
-                <p className="text-[#1a1a1a] font-lora italic leading-relaxed text-lg">"{h.interpretation}"</p>
+                <div className="text-[#8b4513] text-[10px] font-black uppercase tracking-widest mb-1">Sign: {safeRender(h.sign)} • Lord: {safeRender(h.lord)}</div>
+                <p className="text-[#1a1a1a] font-lora italic leading-relaxed text-lg">"{safeRender(h.interpretation)}"</p>
               </Card>
             ))}
           </div>
@@ -150,12 +156,12 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
             {report.yogasPresent?.map((y: any, i: number) => (
               <Card key={i} className="p-8 bg-gradient-to-r from-[#d4af37]/10 to-transparent border-[#d4af37]/30 group hover:border-[#d4af37] transition-all">
                 <div className="flex justify-between items-start mb-2">
-                   <h4 className="text-2xl font-cinzel font-black text-[#4a0404] group-hover:text-amber-800 transition-colors uppercase tracking-tight">{y.yogaName}</h4>
-                   <span className="text-[10px] font-black uppercase tracking-widest text-[#d4af37]">{y.type}</span>
+                   <h4 className="text-2xl font-cinzel font-black text-[#4a0404] group-hover:text-amber-800 transition-colors uppercase tracking-tight">{safeRender(y.yogaName)}</h4>
+                   <span className="text-[10px] font-black uppercase tracking-widest text-[#d4af37]">{safeRender(y.type)}</span>
                 </div>
-                <p className="text-xs text-[#8b4513] mt-1 uppercase tracking-widest font-black opacity-60">{y.description}</p>
+                <p className="text-xs text-[#8b4513] mt-1 uppercase tracking-widest font-black opacity-60">{safeRender(y.description)}</p>
                 <div className="mt-6 p-6 bg-white/30 rounded-2xl border border-white/50 shadow-inner">
-                    <p className="text-[#1a1a1a] leading-relaxed italic text-lg">"{y.effects}"</p>
+                    <p className="text-[#1a1a1a] leading-relaxed italic text-lg">"{safeRender(y.effects)}"</p>
                 </div>
               </Card>
             ))}
@@ -170,11 +176,11 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
                <Card key={i} className="p-10 bg-white/60 border-[#d4af37]/20 relative overflow-hidden group shadow-md hover:shadow-2xl transition-all">
                   <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#d4af37]/5 rounded-full blur-3xl group-hover:bg-[#d4af37]/20 transition-all"></div>
                   <h4 className="text-2xl font-cinzel font-black text-[#4a0404] uppercase mb-6 border-b-2 border-[#d4af37]/10 pb-3 capitalize">{key.replace(/([A-Z])/g, ' $1')}</h4>
-                  <p className="text-[#1a1a1a] font-lora leading-relaxed italic text-lg">{data.detailed || data.summary}</p>
+                  <p className="text-[#1a1a1a] font-lora leading-relaxed italic text-lg">{safeRender(data.detailed || data.summary)}</p>
                   {data.advice && (
                     <div className="mt-8 p-6 bg-[#4a0404]/5 border border-[#4a0404]/10 rounded-2xl">
                       <span className="text-[10px] uppercase font-black text-[#4a0404] tracking-[0.3em] block mb-3">The Sage Advises:</span>
-                      <p className="text-sm text-[#4a0404]/80 font-medium italic">"{data.advice}"</p>
+                      <p className="text-sm text-[#4a0404]/80 font-medium italic">"{safeRender(data.advice)}"</p>
                     </div>
                   )}
                </Card>
@@ -193,8 +199,8 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
                   <h5 className="text-[#d4af37] font-black uppercase text-xs tracking-[0.4em] border-b border-[#d4af37]/20 pb-2">Ritual Mantras</h5>
                   {report.remedies?.mantras?.map((m: any, i: number) => (
                     <div key={i} className="p-6 bg-black/40 rounded-2xl border border-[#d4af37]/20 shadow-xl">
-                      <p className="text-2xl font-cinzel text-white leading-relaxed">{m.mantra}</p>
-                      <p className="text-[10px] text-[#d4af37] mt-3 uppercase font-black tracking-widest">Purpose: {m.purpose} • Count: {m.count}</p>
+                      <p className="text-2xl font-cinzel text-white leading-relaxed">{safeRender(m.mantra)}</p>
+                      <p className="text-[10px] text-[#d4af37] mt-3 uppercase font-black tracking-widest">Purpose: {safeRender(m.purpose)} • Count: {safeRender(m.count)}</p>
                     </div>
                   ))}
                 </div>
@@ -202,8 +208,8 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
                   <h5 className="text-[#d4af37] font-black uppercase text-xs tracking-[0.4em] border-b border-[#d4af37]/20 pb-2">Gemstone Alignment</h5>
                   {report.remedies?.gemstones?.map((g: any, i: number) => (
                     <div key={i} className="p-6 bg-black/40 rounded-2xl border border-[#d4af37]/20 shadow-xl">
-                      <p className="text-2xl font-cinzel text-white leading-relaxed">{g.stone}</p>
-                      <p className="text-[10px] text-[#d4af37] mt-3 uppercase font-black tracking-widest">Planet: {g.planet} • Wearing: {g.wearingInstructions}</p>
+                      <p className="text-2xl font-cinzel text-white leading-relaxed">{safeRender(g.stone)}</p>
+                      <p className="text-[10px] text-[#d4af37] mt-3 uppercase font-black tracking-widest">Planet: {safeRender(g.planet)} • Wearing: {safeRender(g.wearingInstructions)}</p>
                     </div>
                   ))}
                 </div>
@@ -214,7 +220,7 @@ const VedicReportRenderer: React.FC<VedicReportRendererProps> = ({ report }) => 
               <div className="text-[8rem] leading-none opacity-10 font-cinzel text-[#d4af37] absolute -top-10 left-1/2 -translate-x-1/2 pointer-events-none select-none">❂</div>
               <h3 className="text-3xl font-cinzel font-black text-white uppercase mb-6 tracking-widest">Master's Final Decree</h3>
               <p className="text-2xl text-amber-100/90 italic font-lora leading-relaxed max-w-4xl mx-auto drop-shadow-sm">
-                "{report.summary?.lifeAdvice || report.summary?.overallAssessment}"
+                "{safeRender(report.summary?.lifeAdvice || report.summary?.overallAssessment)}"
               </p>
               <div className="mt-16 inline-block px-12 py-5 bg-[#d4af37] text-[#2d0a18] font-black uppercase tracking-[0.5em] rounded-full shadow-[0_0_50px_rgba(212,175,55,0.4)] transform hover:scale-105 transition-all text-xs">
                 Sealed & Validated

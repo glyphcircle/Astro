@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 // @ts-ignore
 import { Link } from 'react-router-dom';
@@ -109,7 +108,7 @@ const Remedy: React.FC = () => {
                                </div>
                             </>
                         ) : (
-                            <FullReport reading={reading} title={t('aiGuidance')} imageUrl="https://images.unsplash.com/photo-1528319725582-ddc096101511?q=80&w=800" chartData={chartData} />
+                            <FullReport reading={reading} category="remedy" title={t('aiGuidance')} imageUrl="https://images.unsplash.com/photo-1528319725582-ddc096101511?q=80&w=800" chartData={chartData} />
                         )}
                    </div>
                 )}

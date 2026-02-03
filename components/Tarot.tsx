@@ -47,7 +47,7 @@ const calculateTarotVedicData = (card: TarotCardData) => {
     let vedicMetrics = [];
     if (card.type === 'Major') {
         elementalBalance = [{ element: 'Fire', sanskrit: 'Agni', score: 30 }, { element: 'Water', sanskrit: 'Jala', score: 20 }, { element: 'Air', sanskrit: 'Vayu', score: 20 }, { element: 'Ether', sanskrit: 'Akasha', score: 30 }];
-        vedicMetrics = [{ label: 'Karma (Destiny)', sub: 'Prarabdha', value: 90 }, { label: 'Wisdom (Jnana)', sub: 'Buddhi', value: 85 }, { label: 'Power (Shakti)', sub: 'Kundalini', value: 75 }];
+        vedicMetrics = [{ label: 'Karma (Destiny)', sub: 'Prarabdha', value: 90 }, { label: 'Wisdom (Jnana)', sub: 'Jnana', value: 85 }, { label: 'Power (Shakti)', sub: 'Kundalini', value: 75 }];
     } else {
         switch (card.suit) {
             case 'Wands': 
@@ -265,7 +265,7 @@ const Tarot: React.FC = () => {
                                 ) : (
                                     <div className="w-full">
                                         <ErrorBoundary>
-                                            <FullReport reading={reading} title={selectedCard!.name} subtitle={`${selectedCard!.type} Arcana • Vedic Insight`} imageUrl={reportImage} chartData={chartData} />
+                                            <FullReport reading={reading} category="tarot" title={selectedCard!.name} subtitle={`${selectedCard!.type} Arcana • Vedic Insight`} imageUrl={reportImage} chartData={chartData} />
                                         </ErrorBoundary>
                                         <div className="text-center mt-8">
                                             <button onClick={resetReading} className="px-10 py-4 bg-gradient-to-r from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 text-amber-200 rounded-full border border-amber-500/30 font-bold transition-all transform hover:scale-105 shadow-xl uppercase font-cinzel tracking-[0.2em]">Draw Another Card</button>

@@ -153,6 +153,7 @@ const DreamAnalysis: React.FC = () => {
                                     <div className="max-h-[30rem] overflow-y-auto custom-scrollbar pr-2">
                                         <FullReport 
                                             reading={result.meaning} 
+                                            category="dream-analysis"
                                             title="Dream Interpretation" 
                                             subtitle="Subconscious Wisdom" 
                                             imageUrl={cloudManager.resolveImage(reportImage)} 

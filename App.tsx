@@ -41,8 +41,6 @@ import ReportTemplateManager from './components/ReportTemplateManager';
 
 // Context and Provider imports
 import { useAuth } from './context/AuthContext';
-import { DbProvider } from './context/DbContext';
-import { PaymentProvider } from './context/PaymentContext';
 import { PushNotifications } from './components/PushNotifications';
 import DailyReminder from './components/DailyReminder';
 import BadgeCounter from './components/BadgeCounter';
@@ -211,17 +209,13 @@ function AppRoutes() {
 // Main App Component
 function App() {
   return (
-    <DbProvider>
-      <AccessibilityProvider>
-        <AnalyticsProvider>
-          <PushNotifications>
-            <PaymentProvider>
-              <AppRoutes />
-            </PaymentProvider>
-          </PushNotifications>
-        </AnalyticsProvider>
-      </AccessibilityProvider>
-    </DbProvider>
+    <AccessibilityProvider>
+      <AnalyticsProvider>
+        <PushNotifications>
+          <AppRoutes />
+        </PushNotifications>
+      </AnalyticsProvider>
+    </AccessibilityProvider>
   );
 }
 

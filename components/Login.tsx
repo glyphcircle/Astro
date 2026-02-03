@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { dbService } from '../services/db';
+import { useTheme } from '../context/ThemeContext';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,10 +13,11 @@ const Login: React.FC = () => {
   
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
+  const isLight = theme.mode === 'light';
 
   const brandLogo = 'https://lh3.googleusercontent.com/d/1Mt-LsfsxuxNpGY0hholo8qkBv58S6VNO';
 
-  // 🕵️ PRE-FETCH TRAPDOOR SECRET
   useEffect(() => {
     const fetchSecret = async () => {
         try {
@@ -31,10 +32,7 @@ const Login: React.FC = () => {
 
   const handleEmailChange = (val: string) => {
     setEmail(val);
-    
-    // ⚡ INSTANT TRAPDOOR CHECK
     if (cachedSecret && val.trim() === cachedSecret) {
-        console.log("🛠️ Instant Trapdoor Detected. Jumping to Master Portal...");
         if (navigator.vibrate) navigator.vibrate([30, 30]);
         navigate('/master-login');
     }
@@ -46,54 +44,57 @@ const Login: React.FC = () => {
     setLocalError(null);
 
     try {
-      const enteredEmail = email.trim();
-      const enteredPassword = password.trim();
-      
-      // Fallback check on submit if instant detection missed
-      if (cachedSecret && (enteredEmail === cachedSecret || enteredPassword === cachedSecret)) {
+      if (cachedSecret && (email.trim() === cachedSecret || password.trim() === cachedSecret)) {
           navigate('/master-login');
           return;
       }
-
       await login(email, password);
     } catch (err: any) {
-      setLocalError(err.message || "Authentication failed. Please verify your credentials.");
+      setLocalError(err.message || "Authentication failed.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 pb-12 bg-black font-lora">
-      <div className="w-full max-w-md bg-gray-900/60 border border-amber-500/20 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-2xl animate-fade-in-up">
+    <div className={`flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 pb-12 transition-colors duration-500 font-lora ${
+      isLight ? 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50' : 'bg-black'
+    }`}>
+      <div className={`w-full max-w-md border rounded-2xl shadow-2xl overflow-hidden backdrop-blur-2xl animate-fade-in-up transition-all ${
+        isLight ? 'bg-white/90 border-amber-200' : 'bg-gray-900/60 border-amber-500/20'
+      }`}>
         <div className="p-8">
           <div className="text-center mb-10">
              <div className="mx-auto w-24 h-24 mb-6 rounded-full p-1 bg-gradient-to-tr from-amber-500 to-purple-600 shadow-xl flex items-center justify-center overflow-hidden bg-black border border-amber-500/20">
                 <img src={brandLogo} alt="Logo" className="w-[80%] h-[80%] object-contain" />
              </div>
-             <h1 className="text-3xl font-cinzel font-black text-amber-500 tracking-widest uppercase">Registry Access</h1>
+             <h1 className={`text-3xl font-cinzel font-black tracking-widest uppercase ${isLight ? 'text-amber-900' : 'text-amber-500'}`}>Registry Access</h1>
              <p className="text-gray-500 italic text-[10px] uppercase mt-2 tracking-[0.3em]">Authorized Personnel Only</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-                <label className="block text-amber-500/60 font-cinzel font-bold text-[9px] uppercase tracking-widest ml-1 mb-1.5">Administrative ID</label>
+                <label className={`block font-cinzel font-bold text-[9px] uppercase tracking-widest ml-1 mb-1.5 ${isLight ? 'text-amber-800' : 'text-amber-500/60'}`}>Administrative ID</label>
                 <input 
                     type="text" 
                     value={email} 
                     onChange={(e) => handleEmailChange(e.target.value)} 
-                    className="w-full p-3.5 bg-black border border-gray-800 rounded-xl text-white outline-none focus:border-amber-500 transition-all font-mono text-xs shadow-inner" 
+                    className={`w-full p-3.5 border rounded-xl outline-none transition-all font-mono text-xs shadow-inner ${
+                      isLight ? 'bg-amber-50/50 border-amber-200 text-amber-950 focus:border-amber-600' : 'bg-black border-gray-800 text-white focus:border-amber-500'
+                    }`} 
                     placeholder="user@glyphcircle.com" required 
                 />
             </div>
             
             <div>
-                <label className="block text-amber-500/60 font-cinzel font-bold text-[9px] uppercase tracking-widest ml-1 mb-1.5">Secret Key</label>
+                <label className={`block font-cinzel font-bold text-[9px] uppercase tracking-widest ml-1 mb-1.5 ${isLight ? 'text-amber-800' : 'text-amber-500/60'}`}>Secret Key</label>
                 <input 
                     type="password" 
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
-                    className="w-full p-3.5 bg-black border border-gray-800 rounded-xl text-white outline-none focus:border-amber-500 transition-all font-mono text-xs shadow-inner" 
+                    className={`w-full p-3.5 border rounded-xl outline-none transition-all font-mono text-xs shadow-inner ${
+                      isLight ? 'bg-amber-50/50 border-amber-200 text-amber-950 focus:border-amber-600' : 'bg-black border-gray-800 text-white focus:border-amber-500'
+                    }`} 
                     placeholder="••••••••" required 
                 />
             </div>
@@ -104,7 +105,9 @@ const Login: React.FC = () => {
               </div>
             )}
 
-            <button type="submit" disabled={isSubmitting} className="w-full bg-amber-600 hover:bg-amber-500 text-black font-black py-4 rounded-xl shadow-xl font-cinzel tracking-widest uppercase disabled:opacity-50 transition-all active:scale-95 text-xs">
+            <button type="submit" disabled={isSubmitting} className={`w-full font-black py-4 rounded-xl shadow-xl font-cinzel tracking-widest uppercase disabled:opacity-50 transition-all active:scale-95 text-xs ${
+              isLight ? 'bg-amber-800 text-white hover:bg-black' : 'bg-amber-600 hover:bg-amber-500 text-black'
+            }`}>
                 {isSubmitting ? 'ESTABLISHING LINK...' : 'AUTHORIZE ACCESS'}
             </button>
           </form>
