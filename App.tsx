@@ -37,6 +37,7 @@ import SigilGallery from './components/SigilGallery';
 import ReportDesigner from './components/ReportDesigner';
 import KalnirnayeCalendar from './components/KalnirnayeCalendar';
 import ComingSoon from './components/ComingSoon';
+import ReportTemplateManager from './components/ReportTemplateManager';
 
 // Context and Provider imports
 import { useAuth } from './context/AuthContext';
@@ -56,6 +57,7 @@ import ContextDbNavigator from './components/ContextDbNavigator';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 import MobileNavBar from './components/MobileNavBar';
 import { useDevice } from './hooks/useDevice';
+
 
 // Idle Cursor Component
 const IdleCursor: React.FC = () => {
@@ -192,6 +194,7 @@ function AppRoutes() {
           <Route path="/cosmic-sync" element={<ProtectedRoute><ErrorBoundary><CosmicSync /></ErrorBoundary></ProtectedRoute>} />
           <Route path="/voice-oracle" element={<ProtectedRoute><ErrorBoundary><VoiceOracle /></ErrorBoundary></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute><ErrorBoundary><KalnirnayeCalendar /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/admin/report-templates" element={<AdminGuard><ReportTemplateManager /></AdminGuard>} />
           <Route path="/coming-soon" element={<ComingSoon />} />
 
           {/* Catch-all redirect */}

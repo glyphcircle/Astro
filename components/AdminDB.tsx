@@ -80,50 +80,71 @@ const AdminDB: React.FC = () => {
     };
 
     const handleCommit = async () => {
-        console.log('🔵 [UI] handleCommit START');
-        setStatus('saving');
-        setErrorMsg(null);
-        const recordId = formData.id;
+    console.log('🔵 [UI] handleCommit START');
+    setStatus('saving');
+    setErrorMsg(null);
+    const recordId = formData.id;
 
-        const payload = { ...formData };
-        SYSTEM_FIELDS.forEach(field => delete (payload as any)[field]);
-        console.log('💾 [UI] Payload before submit:', payload);
-
-        try {
-            if (isNewRecord) {
-                console.log('🆕 [UI] Creating new entry...');
-                await createEntry(tableName, payload);
-                console.log('✅ [UI] Create successful!');
-            } else {
-                if (!recordId) throw new Error('IDENTIFICATION ERROR: Missing ID.');
-                console.log('📝 [UI] Updating entry...');
-                await updateEntry(tableName, recordId, payload);
-                console.log('✅ [UI] Update successful!');
-            }
-
-            // ✅ Wait for refresh to complete BEFORE closing modal
-            console.log('🔄 [UI] Refreshing table data...');
-            await refreshTable(tableName);
-            console.log('✅ [UI] Table refreshed with new data');
-
-            // Now close modal with fresh data
-            console.log('🚪 [UI] Closing modal');
-            setIsModalOpen(false);
-            setStatus('idle');
-            console.log('✅ [UI] Modal closed, button unlocked');
-
-        } catch (err: any) {
-            console.error('💥 [UI] Commit failed:', err);
-            setStatus('error');
-            setErrorMsg(err.message || 'Registry rejected the payload.');
-
-            setTimeout(() => {
-                console.log('🔄 [UI] Auto-clearing error state');
-                setStatus('idle');
-                setErrorMsg(null);
-            }, 3000);
+    const payload = { ...formData };
+    
+    // 🆕 ADD THIS: Convert Google Drive URLs to AWS S3 BEFORE saving
+    if (tableName === 'report_formats') {
+        console.log('🔄 [UI] Converting Drive URLs...');
+        
+        // Convert template_image_url
+        if (payload.template_image_url && payload.template_image_url.includes('drive.google.com')) {
+            console.log('📸 Original template_image_url:', payload.template_image_url);
+            payload.template_image_url = toDriveEmbedUrl(payload.template_image_url);
+            console.log('✅ Converted template_image_url:', payload.template_image_url);
         }
-    };
+        
+        // Convert thumbnail_url
+        if (payload.thumbnail_url && payload.thumbnail_url.includes('drive.google.com')) {
+            console.log('📸 Original thumbnail_url:', payload.thumbnail_url);
+            payload.thumbnail_url = toDriveEmbedUrl(payload.thumbnail_url);
+            console.log('✅ Converted thumbnail_url:', payload.thumbnail_url);
+        }
+    }
+    
+    SYSTEM_FIELDS.forEach(field => delete (payload as any)[field]);
+    console.log('💾 [UI] Payload before submit:', payload);
+
+    try {
+        if (isNewRecord) {
+            console.log('🆕 [UI] Creating new entry...');
+            await createEntry(tableName, payload);
+            console.log('✅ [UI] Create successful!');
+        } else {
+            if (!recordId) throw new Error('IDENTIFICATION ERROR: Missing ID.');
+            console.log('📝 [UI] Updating entry...');
+            await updateEntry(tableName, recordId, payload);
+            console.log('✅ [UI] Update successful!');
+        }
+
+        // ✅ Wait for refresh to complete BEFORE closing modal
+        console.log('🔄 [UI] Refreshing table data...');
+        await refreshTable(tableName);
+        console.log('✅ [UI] Table refreshed with new data');
+
+        // Now close modal with fresh data
+        console.log('🚪 [UI] Closing modal');
+        setIsModalOpen(false);
+        setStatus('idle');
+        console.log('✅ [UI] Modal closed, button unlocked');
+
+    } catch (err: any) {
+        console.error('💥 [UI] Commit failed:', err);
+        setStatus('error');
+        setErrorMsg(err.message || 'Registry rejected the payload.');
+
+        setTimeout(() => {
+            console.log('🔄 [UI] Auto-clearing error state');
+            setStatus('idle');
+            setErrorMsg(null);
+        }, 3000);
+    }
+};
+
 
     return (
         <div className="min-h-screen bg-[#020205] pt-32 p-4 md:p-8 md:pt-40 font-mono text-gray-300">

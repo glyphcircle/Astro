@@ -27,12 +27,10 @@ export async function loadUserTheme(): Promise<ThemeConfig> {
     const user = session?.user;
     
     if (!user) {
-      console.log('🎨 [THEME] No user detected, using localStorage theme');
       return localTheme;
     }
 
     // THIRD: Try to load from Supabase for cross-device consistency
-    console.log('🎨 [THEME] User found, synchronizing with Supabase...');
     const { data, error } = await supabase
       .from('user_theme_preferences')
       .select('*')
@@ -40,7 +38,6 @@ export async function loadUserTheme(): Promise<ThemeConfig> {
       .maybeSingle();
 
     if (error || !data) {
-      console.log('🎨 [THEME] No Supabase data or error, using localStorage');
       return localTheme;
     }
 
@@ -50,8 +47,6 @@ export async function loadUserTheme(): Promise<ThemeConfig> {
       hoverOpacity: data.hover_opacity ? parseFloat(data.hover_opacity) : localTheme.hoverOpacity,
       cardOpacity: data.card_opacity ? parseFloat(data.card_opacity) : localTheme.cardOpacity,
     };
-
-    console.log('✅ [THEME] Loaded and synced from Supabase:', supabaseTheme);
     
     // Update localStorage to match Supabase
     saveThemeToLocalStorage(supabaseTheme);
@@ -73,7 +68,6 @@ export async function saveUserTheme(theme: ThemeConfig): Promise<void> {
     const user = session?.user;
     
     if (!user) {
-      console.log('🎨 [THEME] Guest session, saved to localStorage only');
       return;
     }
 
@@ -92,13 +86,9 @@ export async function saveUserTheme(theme: ThemeConfig): Promise<void> {
       });
 
     if (error) {
-      if (error.code === '42P01') {
-        console.warn('⚠️ [THEME] user_theme_preferences table missing in Supabase.');
-      } else {
+      if (error.code !== '42P01') { // Ignore missing table error during dev
         throw error;
       }
-    } else {
-      console.log('✅ [THEME] Successfully synced to Supabase for user:', user.email);
     }
   } catch (err) {
     console.error('❌ [THEME] Error saving to Supabase:', err);
@@ -108,26 +98,18 @@ export async function saveUserTheme(theme: ThemeConfig): Promise<void> {
 export function loadThemeFromLocalStorage(): ThemeConfig {
   try {
     const stored = localStorage.getItem(THEME_KEY);
-    console.log('📦 [THEME] localStorage raw value:', stored);
-    
     if (stored) {
-      const parsed = JSON.parse(stored);
-      console.log('✅ [THEME] Parsed from localStorage:', parsed);
-      return parsed;
+      return JSON.parse(stored);
     }
   } catch (err) {
     console.error('❌ [THEME] Error parsing localStorage:', err);
   }
-  
-  console.log('🎨 [THEME] No valid local storage, using DEFAULT_THEME');
   return DEFAULT_THEME;
 }
 
 export function saveThemeToLocalStorage(theme: ThemeConfig): void {
   try {
-    const themeJson = JSON.stringify(theme);
-    localStorage.setItem(THEME_KEY, themeJson);
-    console.log('💾 [THEME] Saved to localStorage:', themeJson);
+    localStorage.setItem(THEME_KEY, JSON.stringify(theme));
   } catch (err) {
     console.error('❌ [THEME] Failed to save to localStorage:', err);
   }

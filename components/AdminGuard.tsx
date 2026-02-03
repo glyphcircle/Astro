@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -35,9 +34,9 @@ const AdminGuard: React.FC<Props> = ({ children }) => {
       return <>{children}</>;
   }
 
-  // 4. Verification Failed
-  console.warn("⛔ AdminGuard: Definitive Access Denied. Server-side check failed.");
-  return <Navigate to="/login" replace />;
+  // 4. Verification Failed - Redirect to Admin Portal instead of standard login
+  console.warn("⛔ AdminGuard: Access Denied. Redirecting to Master Portal.");
+  return <Navigate to="/master-login" replace />;
 };
 
 export default AdminGuard;

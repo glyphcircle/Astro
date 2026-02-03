@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { loadUserTheme, saveUserTheme, applyTheme, ThemeConfig, DEFAULT_THEME, saveThemeToLocalStorage } from '../services/themeService';
 import { THEMES, ThemeId } from '../services/themeConfig';
+import { useAuth } from './AuthContext';
 
 interface ThemeContextType {
   theme: ThemeConfig;
@@ -20,10 +21,12 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [theme, setThemeState] = useState<ThemeConfig>(DEFAULT_THEME);
   const [currentThemeId, setCurrentThemeId] = useState<ThemeId>('default');
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth(); // Monitor auth state to trigger theme sync
 
-  // Load theme on mount
+  // 1. Init theme on mount and when user changes
   useEffect(() => {
     const initTheme = async () => {
+      // Re-load theme. If user is logged in, it will pull from Supabase.
       const loadedTheme = await loadUserTheme();
       setThemeState(loadedTheme);
       applyTheme(loadedTheme);
@@ -36,21 +39,17 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setIsLoading(false);
     };
     initTheme();
-  }, []);
+  }, [user]); // Re-run when user logs in/out
 
-  // Monitor theme state and mirror to localStorage + DOM immediately
+  // 2. Monitor theme state and mirror to localStorage + DOM immediately
   useEffect(() => {
     if (!isLoading) {
       saveThemeToLocalStorage(theme);
       applyTheme(theme);
-      // Background sync to Supabase
+      // Background sync to Supabase only if it changed from the UI
       saveUserTheme(theme);
     }
   }, [theme, isLoading]);
-
-  const persist = useCallback(async (newTheme: ThemeConfig) => {
-      setThemeState(newTheme);
-  }, []);
 
   const toggleMode = useCallback(() => {
     setThemeState(prev => {
