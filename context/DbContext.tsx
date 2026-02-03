@@ -90,32 +90,45 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   // 🔧 Direct HTTP UPDATE (PATCH) - bypasses Supabase client deadlock
+  // 🔧 Direct HTTP UPDATE (PATCH) - bypasses Supabase client deadlock
   const directUpdate = async (tableName: string, id: string, updates: any) => {
     console.log('🔧 [DIRECT] Starting HTTP PATCH...');
-
+    console.log('📦 [DIRECT] Table:', tableName);
+    console.log('🆔 [DIRECT] ID:', id);
+    console.log('📦 [DIRECT] Updates Payload:', JSON.stringify(updates, null, 2)); // 🆕 ADD THIS
+    
     const token = getAuthToken();
     const url = `${SUPABASE_URL}/rest/v1/${tableName}?id=eq.${id}`;
-
+    
+    console.log('🌐 [DIRECT] Full URL:', url); // 🆕 ADD THIS
+    console.log('🔑 [DIRECT] Auth Token (first 20 chars):', token.substring(0, 20) + '...'); // 🆕 ADD THIS
+    
     const response = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify(updates)
+        method: 'PATCH',
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(updates)
     });
-
+    
+    console.log('📊 [DIRECT] Response Status:', response.status); // 🆕 ADD THIS
+    console.log('📊 [DIRECT] Response OK?:', response.ok); // 🆕 ADD THIS
+    
     if (!response.ok) {
-      const text = await response.text();
-      console.error('🚨 [DIRECT] Error response:', text);
-      throw new Error(`HTTP ${response.status}: ${text}`);
+        const text = await response.text();
+        console.error('🚨 [DIRECT] Error response:', text);
+        throw new Error(`HTTP ${response.status}: ${text}`);
     }
-
+    
     const data = await response.json();
+    console.log('✅ [DIRECT] Response Data:', JSON.stringify(data, null, 2)); // 🆕 ADD THIS
+    
     return Array.isArray(data) ? data[0] : data;
   };
+
 
   // 🆕 Direct HTTP CREATE (POST) - bypasses Supabase client deadlock
   const directCreate = async (tableName: string, payload: any) => {

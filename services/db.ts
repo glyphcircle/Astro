@@ -42,6 +42,7 @@ export class SupabaseDatabase {
 
   async updateEntry(table: string, id: string | number, updates: any) {
     console.log('📡 [DB] PATCH START', { tableName: table, id, updatesKeys: Object.keys(updates) });
+    console.log('📦 [DB] Full Updates Payload:', JSON.stringify(updates, null, 2)); // 🆕 ADD THIS
 
     if (!supabase) {
       console.error('❌ CRITICAL: supabase UNDEFINED');
@@ -55,6 +56,8 @@ export class SupabaseDatabase {
         .eq('id', id)
         .select();
 
+      console.log('📊 [DB] Supabase Response:', { data, error }); // 🆕 ADD THIS
+
       if (error) {
         console.error('🚨 [DB] RLS ERROR:', {
           message: error.message,
@@ -66,10 +69,11 @@ export class SupabaseDatabase {
       }
 
       if (!data || data.length === 0) {
+        console.error('⚠️ [DB] NO DATA RETURNED after update'); // 🆕 ADD THIS
         throw new Error(`No records updated for ID: ${id}`);
       }
 
-      console.log('✅ [DB] PATCH SUCCESS:', data[0]?.id || id);
+      console.log('✅ [DB] PATCH SUCCESS:', data[0]); // 🆕 SHOW FULL RETURNED DATA
       return data;
 
     } catch (error: any) {
