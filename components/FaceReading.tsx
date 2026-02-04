@@ -3,6 +3,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getFaceReading } from '../services/geminiService';
 import { calculateFaceReading, FaceAnalysis } from '../services/faceReadingEngine';
+import { dbService } from '../services/db';
 import Button from './shared/Button';
 import ProgressBar from './shared/ProgressBar';
 import { useTranslation } from '../hooks/useTranslation';
@@ -12,6 +13,9 @@ import { useAuth } from '../context/AuthContext';
 import { useDb } from '../hooks/useDb';
 import { cloudManager } from '../services/cloudManager';
 import Card from './shared/Card';
+import SmartBackButton from './shared/SmartBackButton';
+import ServiceResult from './ServiceResult';
+import ReportLoader from './ReportLoader';
 
 const FaceReading: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -24,6 +28,10 @@ const FaceReading: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [isPaid, setIsPaid] = useState<boolean>(false);
   
+  // Registry states
+  const [isCheckingRegistry, setIsCheckingRegistry] = useState(false);
+  const [retrievedTx, setRetrievedTx] = useState<any>(null);
+
   // Camera State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -33,6 +41,8 @@ const FaceReading: React.FC = () => {
   const { openPayment } = usePayment();
   const { user } = useAuth();
   const { db } = useDb();
+  const { theme } = (useDb() as any).theme || { theme: { mode: 'dark' } };
+  const isLight = theme.mode === 'light';
 
   const ADMIN_EMAILS = ['master@gylphcircle.com', 'admin@gylphcircle.com'];
   const isAdmin = user && ADMIN_EMAILS.includes(user.email);
@@ -49,6 +59,19 @@ const FaceReading: React.FC = () => {
       }
     };
   }, [cameraStream]);
+
+  // 🔑 Auto-trigger PDF logic
+  useEffect(() => {
+    const flag = sessionStorage.getItem('autoDownloadPDF');
+    if (flag && isPaid && reading) {
+      sessionStorage.removeItem('autoDownloadPDF');
+      console.log('🚀 Auto-triggering PDF for Face Reading...');
+      setTimeout(() => {
+        const btn = document.querySelector('[data-report-download="true"]') as HTMLButtonElement | null;
+        btn?.click();
+      }, 1500);
+    }
+  }, [isPaid, reading]);
 
   useEffect(() => {
     if (isCameraOpen && videoRef.current && cameraStream) {
@@ -165,15 +188,41 @@ const FaceReading: React.FC = () => {
     }
   }, [imageFile, language]);
   
-  const handleReadMore = () => {
+  const proceedToPayment = useCallback(() => {
     openPayment(() => {
         setIsPaid(true);
     }, 'Face Reading', servicePrice);
+  }, [servicePrice, openPayment]);
+
+  /**
+   * Explicit handler for "Unlock Full Report"
+   */
+  const handleReadMore = async () => {
+    if (!reading) return;
+    
+    setIsCheckingRegistry(true);
+    try {
+        const existing = await dbService.checkAlreadyPaid('face-reading', { name: user?.name });
+        if (existing.exists) {
+            setRetrievedTx(existing.transaction);
+            setReading(existing.reading?.content || reading);
+            setIsPaid(false); 
+            setIsCheckingRegistry(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+    } catch (err) {
+        console.error("❌ Face reading registry check failed:", err);
+    } finally {
+        setIsCheckingRegistry(false);
+    }
+
+    proceedToPayment();
   };
 
   const renderVedicDashboard = () => {
       if (!analysisData) return null;
-      const { zones, planetary, charts } = analysisData;
+      const { zones, planetary } = analysisData;
 
       return (
           <div className="space-y-6 mt-6 animate-fade-in-up">
@@ -231,13 +280,29 @@ const FaceReading: React.FC = () => {
   return (
     <div className="flex flex-col gap-12 items-center">
       <div className="w-full max-w-4xl mx-auto p-4 md:p-6">
-          <Link to="/home" className="inline-flex items-center text-amber-200 hover:text-amber-400 transition-colors mb-4 group">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transform group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              {t('backToHome')}
-          </Link>
+          <SmartBackButton label={t('backToHome')} className="mb-6" />
           
+          {retrievedTx && !isPaid && (
+            <div className={`
+              rounded-2xl p-6 mb-8 shadow-xl border-2 animate-fade-in-up
+              ${isLight 
+                ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300' 
+                : 'bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-green-500/40'
+              }
+            `}>
+              <div className="flex items-center justify-between gap-6">
+                 <div>
+                    <h3 className={`font-cinzel font-black text-xl uppercase ${isLight ? 'text-emerald-800' : 'text-green-400'}`}>Already Purchased Today!</h3>
+                    <p className={`text-sm italic ${isLight ? 'text-emerald-700' : 'text-green-300/70'}`}>Entry retrieved from history.</p>
+                 </div>
+                 <div className="flex gap-2">
+                    <button onClick={() => setIsPaid(true)} className="bg-emerald-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest">📄 View</button>
+                    <button onClick={() => { setImageFile(null); setImagePreview(null); setReading(''); setAnalysisData(null); setRetrievedTx(null); }} className="bg-amber-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest">🆕 New Reading</button>
+                 </div>
+              </div>
+            </div>
+          )}
+
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-amber-300 mb-2">{t('aiFaceReading')}</h2>
             <p className="text-amber-100/70">{t('uploadFacePrompt')}</p>
@@ -298,29 +363,40 @@ const FaceReading: React.FC = () => {
                    <div className="space-y-8 animate-fade-in-up">
                         {renderVedicDashboard()}
                         {!isPaid ? (
-                            <Card className="p-6 border-l-4 border-amber-500 bg-gray-900/80">
-                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-500/20">
-                                    <span className="text-xl">🕉️</span>
-                                    <h4 className="text-amber-300 font-cinzel font-bold text-sm">Vedic Insight Summary</h4>
-                                </div>
-                                <div className="space-y-2 mb-6 font-lora text-amber-100/90 text-sm italic">
-                                   {reading.split('\n').slice(0, 4).map((line, i) => (
-                                       <p key={i}>{line}</p>
-                                   ))}
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                   <Button onClick={handleReadMore} className="w-full bg-gradient-to-r from-amber-600 to-maroon-700 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.4)]">{t('readMore')}</Button>
-                                   {isAdmin && <button onClick={() => setIsPaid(true)} className="text-xs text-amber-500 hover:text-amber-300 underline font-mono text-center">👑 Admin Access: Skip Payment</button>}
-                               </div>
-                            </Card>
+                            <ServiceResult serviceName="FACE READING" serviceIcon="😐" previewText={reading} onRevealReport={handleReadMore} isAdmin={isAdmin} onAdminBypass={() => setIsPaid(true)} />
                         ) : (
-                            <FullReport reading={reading} category="face-reading" title={t('aiFaceReading')} imageUrl={cloudManager.resolveImage(reportImage)} />
+                            <FullReport 
+                              reading={reading} 
+                              category="face-reading" 
+                              title="Face Reading" 
+                              subtitle={user?.name || 'Seeker'}
+                              imageUrl={cloudManager.resolveImage(reportImage)} 
+                              chartData={analysisData}
+                            />
                         )}
                    </div>
                 )}
               </div>
             </div>
       </div>
+
+      {isCheckingRegistry && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[250]">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-10 rounded-3xl shadow-2xl border border-amber-500/30 max-w-md text-center">
+            <div className="relative mb-8">
+              <div className="w-24 h-24 mx-auto">
+                <div className="absolute inset-0 border-4 border-amber-500/20 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-t-amber-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                <div className="absolute inset-3 border-4 border-amber-500/10 rounded-full"></div>
+                <div className="absolute inset-3 border-4 border-b-amber-400 border-t-transparent border-r-transparent border-l-transparent rounded-full animate-spin-reverse" style={{ animationDuration: '1.5s' }}></div>
+              </div>
+            </div>
+            <h3 className="text-3xl font-bold text-white mb-3 tracking-wide">Checking Registry</h3>
+            <p className="text-gray-300 mb-2 text-lg">Verifying your purchase history</p>
+            <p className="text-gray-500 text-sm mb-6">Scanning the ancestral records...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

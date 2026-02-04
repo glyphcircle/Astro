@@ -184,3 +184,53 @@ a:hover {
 .animate-fade-out {
   animation: fadeOut 5s ease-in-out forwards;
 }
+
+/* --- PRICING SECTION ALIGNMENT FIXES --- */
+.pricing-section-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  align-items: stretch;
+}
+
+.pricing-card-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pricing-card-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.pricing-card-button-footer {
+  margin-top: auto;
+}
+
+@keyframes spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse 1.5s linear infinite;
+}
+
+// PDF 
+/* Add to your global CSS or component styles */
+@media print {
+  button,
+  .no-print,
+  [role="button"],
+  .download-button {
+    display: none !important;
+  }
+  
+  .section-container {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+

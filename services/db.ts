@@ -55,6 +55,8 @@ export interface ReportTemplate {
 }
 
 export class SupabaseDatabase {
+  public client = supabase; // 🔓 Expose client for direct access
+
   async getAll(table: string) {
     console.log(`📡 [DB] Fetching all from: ${table}`);
     if (!supabase) throw new Error("Supabase is not defined.");
@@ -65,7 +67,6 @@ export class SupabaseDatabase {
 
   async getRandomTemplate(category: string): Promise<ReportTemplate | null> {
     try {
-      // First try to find a category specific template
       const { data, error } = await supabase
         .from('report_formats')
         .select('*')
@@ -79,7 +80,6 @@ export class SupabaseDatabase {
         return templates[Math.floor(Math.random() * templates.length)];
       }
 
-      // Fallback to a default template if no category match
       const { data: defaultData } = await supabase
         .from('report_formats')
         .select('*')
@@ -191,8 +191,147 @@ export class SupabaseDatabase {
     return data;
   }
 
-  async recordTransaction(data: any) { return supabase.from('transactions').insert(data); }
-  async saveReading(data: any) { return supabase.from('readings').insert(data).select().single(); }
+  async recordTransaction(data: any) { 
+    return supabase.from('transactions').insert(data).select().single(); 
+  }
+  
+  async saveReading(data: any) { 
+    return supabase.from('readings').insert(data).select().single(); 
+  }
+
+  /**
+   * Compare form inputs based on service type to check for duplicates
+   */
+  compareInputs(serviceType: string, current: any, stored: any): boolean {
+    if (!current || !stored) return false;
+
+    const normalize = (val: any) => String(val || '').toLowerCase().trim();
+
+    try {
+      if (serviceType === 'astrology') {
+        return (
+          normalize(current.name) === normalize(stored.name) &&
+          normalize(current.dob) === normalize(stored.dob) &&
+          normalize(current.tob) === normalize(stored.tob) &&
+          normalize(current.pob) === normalize(stored.pob)
+        );
+      }
+      
+      if (serviceType === 'numerology') {
+        return (
+          normalize(current.name) === normalize(stored.name) &&
+          normalize(current.dob) === normalize(stored.dob)
+        );
+      }
+
+      if (serviceType === 'palmistry') {
+        return (
+          normalize(current.name) === normalize(stored.name) &&
+          normalize(current.dob) === normalize(stored.dob) &&
+          normalize(current.handType || current.hand_type) === normalize(stored.handType || stored.hand_type)
+        );
+      }
+
+      if (serviceType === 'tarot') {
+         return (
+          normalize(current.name) === normalize(stored.name) &&
+          normalize(current.card_name || current.question) === normalize(stored.card_name || stored.question)
+        );
+      }
+    } catch (e) {
+      console.warn('⚠️ [DB] Comparison error:', e);
+    }
+    
+    return false;
+  }
+
+  /**
+   * Checks if the user has already successfully paid for this specific input combination today.
+   */
+  async checkAlreadyPaid(
+    serviceType: string,
+    formInputs: Record<string, any>
+  ): Promise<{
+    exists: boolean;
+    reading?: Reading;
+    transaction?: any;
+  }> {
+    try {
+      console.log(`🔍 [DB] Registry search initiated for ${serviceType}...`);
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) return { exists: false };
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayISO = today.toISOString();
+
+      // Query successful transactions for this user/service today
+      // Attempt explicit join
+      let { data: transactions, error: queryError } = await supabase
+        .from('transactions')
+        .select('*, readings (*)')
+        .eq('user_id', user.id)
+        .eq('service_type', serviceType)
+        .eq('status', 'success')
+        .gte('created_at', todayISO)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      // Fallback if join failed or returned nothing unexpectedly
+      if (queryError || !transactions || transactions.length === 0) {
+        console.log('⚠️ [DB] Standard join inconclusive. Performing deep scan fallback...');
+        const { data: txOnly, error: txError } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('service_type', serviceType)
+          .eq('status', 'success')
+          .gte('created_at', todayISO)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (txError || !txOnly || txOnly.length === 0) {
+          console.log('✅ [DB] No historical entries found for today.');
+          return { exists: false };
+        }
+        transactions = txOnly;
+      }
+
+      // Check each transaction for metadata match
+      for (const tx of transactions) {
+        if (this.compareInputs(serviceType, formInputs, tx.metadata)) {
+          console.log('✨ [DB] SACRED MATCH IDENTIFIED! Order:', tx.order_id);
+          
+          // Ensure reading data is loaded
+          let finalReading = tx.readings;
+          if (!finalReading && tx.reading_id) {
+            const { data: rdData } = await supabase
+              .from('readings')
+              .select('*')
+              .eq('id', tx.reading_id)
+              .single();
+            finalReading = rdData;
+          }
+
+          if (finalReading) {
+            return {
+              exists: true,
+              reading: finalReading as Reading,
+              transaction: tx
+            };
+          }
+        }
+      }
+
+      console.log('🔍 [DB] Entries found, but no metadata resonance.');
+      return { exists: false };
+    } catch (err) {
+      console.error('❌ [DB] checkAlreadyPaid failure:', err);
+      // Safety: proceed with new payment if registry check fails
+      return { exists: false };
+    }
+  }
 }
 
 export const dbService = new SupabaseDatabase();

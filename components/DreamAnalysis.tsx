@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Button from './shared/Button';
 import ProgressBar from './shared/ProgressBar';
@@ -26,6 +26,19 @@ const DreamAnalysis: React.FC = () => {
   // Dynamic Image
   const reportImage = db.image_assets?.find((a: any) => a.id === 'report_bg_dream')?.path || "https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?q=80&w=800";
 
+  // 🔑 Auto-trigger PDF logic
+  useEffect(() => {
+    const flag = sessionStorage.getItem('autoDownloadPDF');
+    if (flag && isPaid && result) {
+      sessionStorage.removeItem('autoDownloadPDF');
+      console.log('🚀 Auto-triggering PDF for Dream Analysis...');
+      setTimeout(() => {
+        const btn = document.querySelector('[data-report-download="true"]') as HTMLButtonElement | null;
+        btn?.click();
+      }, 1500);
+    }
+  }, [isPaid, result]);
+
   const handleAnalyze = async () => {
     if (!dreamText.trim() || dreamText.length < 5) {
         setError('Please describe your dream in more detail.');
@@ -47,9 +60,8 @@ const DreamAnalysis: React.FC = () => {
         setProgress(100);
         setResult(response);
 
-        // Generate Chart Data for FullReport
         setChartData({
-            luckyNumbers: response.luckyNumbers, // Pass actual lucky numbers
+            luckyNumbers: response.luckyNumbers,
             vedicMetrics: [
                 { label: 'Sattva (Purity)', sub: 'Clarity', value: Math.floor(Math.random() * 30 + 60) },
                 { label: 'Rajas (Passion)', sub: 'Action', value: Math.floor(Math.random() * 40 + 30) },

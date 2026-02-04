@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useDb } from '../hooks/useDb';
@@ -56,6 +57,15 @@ const Store: React.FC = () => {
 
   const categoryParam = searchParams.get('category');
   const productParam = searchParams.get('product');
+
+  useEffect(() => {
+    const state = location.state as { from?: string; serviceType?: string; preserveReport?: boolean };
+    console.log('🛍️ Store opened from:', state?.from);
+    
+    if (state?.preserveReport && state?.serviceType) {
+      sessionStorage.setItem('return_to_report', state.serviceType);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (categoryParam) setSelectedCategory(categoryParam);

@@ -1,13 +1,11 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import Button from './shared/Button';
 import { useTranslation } from '../hooks/useTranslation';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import SageChat from './SageChat';
-import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { dbService, ReportTemplate } from '../services/db';
 import { cloudManager } from '../services/cloudManager';
+import { generatePDF } from '../utils/pdfGenerator';
 
 interface FullReportProps {
   reading: string;
@@ -23,13 +21,25 @@ const DEFAULT_BRAND_LOGO = 'https://lh3.googleusercontent.com/d/1Mt-LsfsxuxNpGY0
 const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chartData, category = 'general' }) => {
   const { t } = useTranslation();
   const reportRef = useRef<HTMLDivElement>(null);
-  const hiddenRenderRef = useRef<HTMLDivElement>(null);
   
   const [zoom, setZoom] = useState(1.0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [template, setTemplate] = useState<ReportTemplate | null>(null);
   const [pages, setPages] = useState<string[][]>([]);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
+
+  // Standardized container ID based on category
+  const containerId = useMemo(() => {
+    switch (category) {
+      case 'palmistry': return 'palmistry-full-report';
+      case 'tarot': return 'tarot-full-report';
+      case 'face-reading': return 'face-reading-full-report';
+      case 'dream-analysis': return 'dream-analysis-full-report';
+      case 'remedy': return 'ayurveda-full-report';
+      case 'ayurveda': return 'ayurveda-full-report';
+      default: return 'report-full-report';
+    }
+  }, [category]);
 
   // --- FETCH DYNAMIC TEMPLATE ---
   useEffect(() => {
@@ -49,20 +59,13 @@ const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chart
     return normalizedText.split(/\n+/).filter(s => s.trim().length > 0);
   }, [reading]);
 
-  // --- PAGINATION LOGIC ---
-  // Since real-time pagination in a dynamic viewport is complex, 
-  // we render one long container and rely on browser print/PDF breaks,
-  // or manually split into pages for a more "Imperial" multi-page experience.
-  // For simplicity and visual fidelity, we'll implement a "Section-based" pagination 
-  // where sections try to stay together on pages.
+  // --- SECTION-BASED PAGINATION ---
   useEffect(() => {
     if (!segments.length) return;
-    
-    // Group segments into logical chunks
     const chunks: string[][] = [[]];
     let currentChunk = 0;
     let charCount = 0;
-    const MAX_CHARS_PER_PAGE = 2200; // Heuristic for A4 with margins
+    const MAX_CHARS_PER_PAGE = 2200;
 
     segments.forEach(seg => {
       if (charCount + seg.length > MAX_CHARS_PER_PAGE && chunks[currentChunk].length > 0) {
@@ -73,11 +76,10 @@ const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chart
       chunks[currentChunk].push(seg);
       charCount += seg.length;
     });
-
     setPages(chunks);
   }, [segments]);
 
-  const renderSegment = (line: string, index: number, isFirstOnPage: boolean) => {
+  const renderSegment = (line: string, index: number) => {
     let trimmed = line.trim();
     const isPositive = trimmed.includes('[POSITIVE]');
     const isNegative = trimmed.includes('[NEGATIVE]');
@@ -127,27 +129,12 @@ const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chart
     setIsDownloading(true);
     
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      
-      const pageContainers = reportRef.current?.querySelectorAll('.report-page');
-      if (!pageContainers) return;
-
-      for (let i = 0; i < pageContainers.length; i++) {
-        if (i > 0) pdf.addPage();
-        
-        const canvas = await html2canvas(pageContainers[i] as HTMLElement, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#fffcf0'
-        });
-        
-        const imgData = canvas.toDataURL('image/jpeg', 0.9);
-        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
-      }
-      
-      pdf.save(`Decree_${title.replace(/\s+/g, '_')}.pdf`);
+      const safeTitle = title?.trim().length > 0 ? title.trim().replace(/\s+/g, '_') : 'Decree';
+      await generatePDF(containerId, {
+        filename: `Decree_${safeTitle}.pdf`,
+        quality: 0.95,
+        marginSide: 5,
+      });
     } catch (err) {
       console.error('PDF Export Error:', err);
     } finally {
@@ -156,10 +143,10 @@ const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chart
   };
 
   const contentStyles = template ? {
-    marginTop: `${template.content_area_config.marginTop}px`,
-    marginBottom: `${template.content_area_config.marginBottom}px`,
-    marginLeft: `${template.content_area_config.marginLeft}px`,
-    marginRight: `${template.content_area_config.marginRight}px`,
+    paddingTop: `${template.content_area_config.marginTop}px`,
+    paddingBottom: `${template.content_area_config.marginBottom}px`,
+    paddingLeft: `${template.content_area_config.marginLeft}px`,
+    paddingRight: `${template.content_area_config.marginRight}px`,
     color: template.content_area_config.textColor,
     fontFamily: template.content_area_config.fontFamily || 'Lora, serif',
     backgroundColor: template.content_area_config.backgroundColor || 'transparent'
@@ -188,17 +175,16 @@ const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chart
       </div>
 
       <div 
+        id={containerId}
         ref={reportRef}
         className="flex flex-col items-center gap-8 origin-top transition-transform duration-500"
         style={{ transform: `scale(${zoom})`, marginBottom: `${(zoom - 1) * 100}%` }}
       >
-        {/* FIRST PAGE (Title Page) */}
         <div 
           className="report-page relative bg-[#fffcf0] shadow-2xl w-[210mm] min-h-[297mm] overflow-hidden"
           style={{ backgroundImage: `url(${bgUrl})`, backgroundSize: 'cover' }}
         >
           <div style={contentStyles} className="relative z-10 flex flex-col items-center">
-            {/* Logo/Seal */}
             <div className="w-32 h-32 mb-8 bg-black rounded-full border-4 border-amber-500 flex items-center justify-center shadow-xl overflow-hidden mt-12">
                <img src={DEFAULT_BRAND_LOGO} alt="Seal" className="w-[60%] h-[60%] object-contain" />
             </div>
@@ -214,7 +200,6 @@ const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chart
               )}
             </div>
 
-            {/* Metrics if present */}
             {chartData && (
               <div className="w-full max-w-lg grid grid-cols-1 gap-6 mt-12 bg-black/5 p-8 rounded-3xl">
                   {(chartData.vedicMetrics || []).map((m: any, i: number) => (
@@ -231,14 +216,12 @@ const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chart
               </div>
             )}
 
-            {/* Content Start */}
             <div className="mt-12 text-left w-full">
-              {pages[0]?.map((line, i) => renderSegment(line, i, i === 0))}
+              {pages[0]?.map((line, i) => renderSegment(line, i))}
             </div>
           </div>
         </div>
 
-        {/* SUBSEQUENT PAGES */}
         {pages.slice(1).map((pageSegments, pageIdx) => (
           <div 
             key={pageIdx}
@@ -246,10 +229,8 @@ const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chart
             style={{ backgroundImage: `url(${bgUrl})`, backgroundSize: 'cover' }}
           >
             <div style={contentStyles} className="relative z-10">
-              {pageSegments.map((line, i) => renderSegment(line, i, i === 0))}
+              {pageSegments.map((line, i) => renderSegment(line, i))}
             </div>
-            
-            {/* Page Numbering */}
             <div className="absolute bottom-10 left-0 w-full text-center text-[10px] font-bold opacity-30 tracking-widest uppercase">
                Decree Manifestation • Page {pageIdx + 2}
             </div>
@@ -258,7 +239,12 @@ const FullReport: React.FC<FullReportProps> = ({ reading, title, subtitle, chart
       </div>
 
       <div className="flex flex-col sm:flex-row gap-8 justify-center w-full max-w-4xl mt-10 no-print px-6">
-        <Button onClick={handleDownloadPDF} disabled={isDownloading} className="flex-1 h-16 bg-[#2d0a18] hover:bg-[#4a0404] text-white rounded-2xl shadow-xl font-cinzel tracking-widest text-lg">
+        <Button 
+          onClick={handleDownloadPDF} 
+          disabled={isDownloading} 
+          className="flex-1 h-16 bg-[#2d0a18] hover:bg-[#4a0404] text-white rounded-2xl shadow-xl font-cinzel tracking-widest text-lg"
+          data-report-download="true" // 🔑 For auto-trigger support
+        >
           {isDownloading ? "ENGRAVING..." : "📜 ARCHIVE DECREE (PDF)"}
         </Button>
         <Link to="/home" className="flex-1 h-16">

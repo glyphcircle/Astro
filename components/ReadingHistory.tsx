@@ -1,15 +1,16 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Card from './shared/Card';
 // @ts-ignore
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation';
 import FullReport from './FullReport';
+import { generatePDF } from '../utils/pdfGenerator';
 
 const ReadingHistory: React.FC = () => {
   const { history, toggleFavorite, isLoading } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'favorites'>('all');
   const [selectedReading, setSelectedReading] = useState<any>(null);
 
@@ -25,6 +26,53 @@ const ReadingHistory: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const handleViewReport = (reading: any) => {
+    console.log('📄 Opening full report flow for:', reading.id);
+    
+    // Store reading in sessionStorage for the service component to pick up
+    sessionStorage.setItem('viewReport', JSON.stringify({
+      reading: reading,
+      isPaid: true,
+      timestamp: Date.now(),
+    }));
+    
+    // Navigate to the specific service page
+    const routes: Record<string, string> = {
+        'tarot': '/tarot',
+        'palmistry': '/palmistry',
+        'astrology': '/astrology',
+        'numerology': '/numerology',
+        'face-reading': '/face-reading',
+        'remedy': '/remedy',
+        'matchmaking': '/matchmaking',
+        'dream-analysis': '/dream-analysis'
+    };
+    
+    const target = routes[reading.type] || '/home';
+    navigate(target);
+  };
+
+  const handleDownloadPDF = async (reading: any) => {
+    // 🔑 For high-fidelity enriched layouts, we navigate to the service 
+    // and let its own handler trigger automatically via the flag.
+    const ENRICHED_TYPES = ['astrology', 'numerology', 'palmistry', 'tarot', 'face-reading', 'dream-analysis', 'remedy', 'ayurveda'];
+    
+    if (ENRICHED_TYPES.includes(reading.type)) {
+        sessionStorage.setItem('autoDownloadPDF', '1');
+        handleViewReport(reading);
+        return;
+    }
+    
+    // Fallback for simple/generic types
+    setSelectedReading(reading);
+    setTimeout(() => {
+        generatePDF('report-detail-view', {
+            filename: `Report-${reading.title.replace(/\s+/g, '-')}.pdf`,
+            marginSide: 5
+        });
+    }, 1000);
   };
 
   const getTypeIcon = (type: string) => {
@@ -90,10 +138,10 @@ const ReadingHistory: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredHistory.map((reading) => (
-            <div key={reading.id} className="relative group perspective-1000 h-full">
+            <div key={reading.id} className="relative group h-full">
               <div className="absolute -inset-0.5 bg-gradient-to-br from-amber-600 to-purple-900 rounded-xl blur opacity-0 group-hover:opacity-40 transition duration-500"></div>
-              <Card className="relative h-full bg-gray-900/90 border-amber-500/10 group-hover:border-amber-500/30 transition-all duration-300 flex flex-col cursor-pointer group-hover:-translate-y-1">
-                <div className="p-6 flex flex-col h-full" onClick={() => setSelectedReading(reading)}>
+              <Card className="relative h-full bg-gray-900/90 border-amber-500/10 group-hover:border-amber-500/30 transition-all duration-300 flex flex-col group-hover:-translate-y-1">
+                <div className="p-6 flex flex-col h-full">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-black/50 border border-amber-500/30 flex items-center justify-center text-xl shadow-inner">
@@ -115,16 +163,28 @@ const ReadingHistory: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="text-amber-100/70 font-lora italic border-l-2 border-amber-500/20 pl-4 mb-4 line-clamp-4 text-sm flex-grow">
+                  <div className="text-amber-100/70 font-lora italic border-l-2 border-amber-500/20 pl-4 mb-6 line-clamp-3 text-sm flex-grow">
                     "{reading.content}"
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <button 
+                        onClick={() => handleViewReport(reading)}
+                        className="bg-emerald-700/80 hover:bg-emerald-600 text-white py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                    >
+                      📄 View Full
+                    </button>
+                    <button 
+                        onClick={() => handleDownloadPDF(reading)}
+                        className="bg-gray-800 hover:bg-gray-700 text-amber-100 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-all border border-amber-500/20"
+                    >
+                      📥 PDF
+                    </button>
                   </div>
 
                   <div className="flex justify-between items-center text-[10px] text-amber-200/40 border-t border-amber-500/10 pt-4 mt-auto">
                     <span>{formatDate(reading.timestamp)}</span>
                     <span className="flex items-center gap-1 text-green-400/80 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-500/20">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
                       Saved
                     </span>
                   </div>
@@ -135,7 +195,7 @@ const ReadingHistory: React.FC = () => {
         </div>
       )}
 
-      {/* Detail Modal */}
+      {/* Quick Detail Modal */}
       {selectedReading && (
           <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-sm">
               <div className="min-h-screen px-4 text-center">
@@ -144,20 +204,21 @@ const ReadingHistory: React.FC = () => {
                   <div className="inline-block w-full max-w-4xl my-8 text-left align-middle transition-all transform relative">
                       <button 
                         onClick={() => setSelectedReading(null)}
-                        className="fixed top-4 right-4 md:absolute md:-top-2 md:-right-10 text-white hover:text-amber-400 z-50 bg-black/50 rounded-full p-2"
+                        className="fixed top-4 right-4 md:absolute md:-top-2 md:-right-10 text-white hover:text-amber-400 z-[60] bg-black/50 rounded-full p-2"
                       >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                       </button>
-                      <FullReport 
-                          reading={selectedReading.content}
-                          title={selectedReading.title}
-                          subtitle={selectedReading.subtitle}
-                          imageUrl={selectedReading.image_url}
-                          // Pass persisted charts to the renderer
-                          chartData={selectedReading.meta_data}
-                      />
+                      <div id="report-detail-view">
+                          <FullReport 
+                              reading={selectedReading.content}
+                              title={selectedReading.title}
+                              subtitle={selectedReading.subtitle}
+                              imageUrl={selectedReading.image_url}
+                              chartData={selectedReading.meta_data}
+                          />
+                      </div>
                   </div>
               </div>
           </div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
@@ -19,10 +20,33 @@ const SmartBackButton: React.FC<SmartBackButtonProps> = ({
   const isLight = theme.mode === 'light';
 
   const handleBack = () => {
+    // Check if user should return to a specific report
+    const returnToReport = sessionStorage.getItem('return_to_report');
+    
+    if (returnToReport) {
+      console.log(`⬅️ Returning to ${returnToReport} report`);
+      sessionStorage.removeItem('return_to_report');
+      
+      const routes: Record<string, string> = {
+        'numerology': '/numerology',
+        'astrology': '/astrology',
+        'palmistry': '/palmistry',
+        'tarot': '/tarot',
+        'face-reading': '/face-reading',
+        'remedy': '/remedy',
+        'ayurveda': '/ayurveda',
+        'dream-analysis': '/dream-analysis'
+      };
+      
+      const target = routes[returnToReport];
+      if (target) {
+        navigate(target);
+        return;
+      }
+    }
+
     const state = location.state as { from?: string } | undefined;
     
-    // If we have an explicit 'from' state or meaningful history, go back.
-    // window.history.length > 2 is a heuristic that there's a previous page within our app session.
     if (state?.from || window.history.length > 2) {
       navigate(-1);
     } else {

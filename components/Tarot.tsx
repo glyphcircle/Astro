@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getTarotReading, translateText } from '../services/geminiService';
 import Card from './shared/Card';
 import ProgressBar from './shared/ProgressBar';
@@ -16,6 +16,9 @@ import InlineError from './shared/InlineError';
 import { SkeletonReport } from './shared/SkeletonLoader';
 import ErrorBoundary from './shared/ErrorBoundary';
 import SmartBackButton from './shared/SmartBackButton';
+import { dbService } from '../services/db';
+import ServiceResult from './ServiceResult';
+import { useTheme } from '../context/ThemeContext';
 
 const SUITS = ['Wands', 'Cups', 'Swords', 'Pentacles'] as const;
 const RANKS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Page', 'Knight', 'Queen', 'King'];
@@ -40,20 +43,60 @@ const Tarot: React.FC = () => {
   const [animatingCard, setAnimatingCard] = useState<{ card: TarotCardData; startRect: DOMRect } | null>(null);
   const [isAnimationFlying, setIsAnimationFlying] = useState(false);
   const [isAnimationFlipping, setIsAnimationFlipping] = useState(false);
+  
+  // Registry states
+  const [isCheckingRegistry, setIsCheckingRegistry] = useState(false);
+  const [retrievedTx, setRetrievedTx] = useState<any>(null);
+
   const resultsRef = useRef<HTMLDivElement>(null);
   const prevLangRef = useRef('');
+  const navigate = useNavigate();
 
   const { t, language } = useTranslation();
   const { openPayment } = usePayment();
-  const { user, awardKarma, saveReading } = useAuth();
+  const { user, awardKarma } = useAuth();
   const { db } = useDb();
+  const { theme } = useTheme();
+  const isLight = theme.mode === 'light';
 
   const getLanguageName = (code: string) => {
       const map: Record<string, string> = { en: 'English', hi: 'Hindi', fr: 'French', es: 'Spanish' };
       return map[code] || 'English';
   };
 
-  const isAdmin = user && ['master@gylphcircle.com', 'admin@gylphcircle.com'].includes(user.email);
+  const isAdmin = user && ['master@gylphcircle.com', 'admin@gylphcircle.com', 'admin@glyph.circle'].includes(user.email);
+
+  useEffect(() => {
+    const savedReport = sessionStorage.getItem('viewReport');
+    if (savedReport) {
+      try {
+        const { reading: savedReading, timestamp } = JSON.parse(savedReport);
+        if (Date.now() - timestamp < 300000 && savedReading.type === 'tarot') {
+            setReading(savedReading.content);
+            setSelectedCard(savedReading.meta_data?.card || { name: savedReading.title });
+            setIsPaid(true);
+            sessionStorage.removeItem('viewReport');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+      } catch (e) {
+        sessionStorage.removeItem('viewReport');
+      }
+    }
+  }, []);
+
+  // 🔑 Auto-trigger PDF logic
+  useEffect(() => {
+    const flag = sessionStorage.getItem('autoDownloadPDF');
+    if (flag && isPaid && reading) {
+      sessionStorage.removeItem('autoDownloadPDF');
+      console.log('🚀 Auto-triggering PDF for Tarot...');
+      setTimeout(() => {
+        const btn = document.querySelector('[data-report-download="true"]') as HTMLButtonElement | null;
+        btn?.click();
+      }, 1500);
+    }
+  }, [isPaid, reading]);
 
   useEffect(() => {
     if (reading && !isLoading && prevLangRef.current && prevLangRef.current !== language) {
@@ -62,11 +105,7 @@ const Tarot: React.FC = () => {
             try {
                 const translated = await translateText(reading, getLanguageName(language));
                 setReading(translated);
-            } catch (e) {
-                console.error("Translation error", e);
-            } finally {
-                setIsLoading(false);
-            }
+            } catch (e) { console.error("Translation error", e); } finally { setIsLoading(false); }
         };
         handleLangShift();
     }
@@ -87,11 +126,11 @@ const Tarot: React.FC = () => {
     const timer = setInterval(() => setProgress(prev => (prev >= 90 ? prev : prev + 15)), 300);
     try {
       const result = await getTarotReading(card.name, getLanguageName(language));
-      clearInterval(timer); setProgress(100); setReading(result);
+      clearInterval(timer); setProgress(100);
+      setReading(result);
       awardKarma(ACTION_POINTS.READING_COMPLETE);
-      saveReading({ type: 'tarot', title: card.name, subtitle: `${card.type} Arcana`, content: result, image_url: "https://images.unsplash.com/photo-1505537528343-4dc9b89823f6?q=80&w=800" });
     } catch (err: any) { clearInterval(timer); setError(`${err.message || 'The cosmic connection was interrupted.'}`); } finally { setIsLoading(false); }
-  }, [language, awardKarma, saveReading]);
+  }, [language, awardKarma]);
 
   const handleCardSelect = useCallback((card: TarotCardData, e: React.MouseEvent<HTMLDivElement>) => {
     if (isPaid || animatingCard || selectedCard) return;
@@ -113,13 +152,83 @@ const Tarot: React.FC = () => {
   const servicePrice = tarotService?.price || 49;
   const reportImage = cloudManager.resolveImage(tarotService?.image) || "https://images.unsplash.com/photo-1505537528343-4dc9b89823f6?q=80&w=800";
 
-  const handleReadMore = () => openPayment(() => setIsPaid(true), 'Tarot Reading', servicePrice);
-  const resetReading = () => { setSelectedCard(null); setReading(''); setError(''); setIsPaid(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const proceedToPayment = useCallback(() => {
+    openPayment(async (paymentDetails?: any) => {
+      setIsPaid(true);
+      try {
+        const savedReading = await dbService.saveReading({
+          user_id: user?.id, type: 'tarot', title: selectedCard?.name || 'Tarot Reading',
+          subtitle: `${selectedCard?.type} Arcana`, content: reading,
+          image_url: "https://images.unsplash.com/photo-1505537528343-4dc9b89823f6?q=80&w=800", is_paid: true,
+          meta_data: { card: selectedCard }
+        });
+        const readingId = savedReading?.data?.id;
+        if (readingId) {
+          await dbService.recordTransaction({
+            user_id: user?.id, service_type: 'tarot', service_title: `Tarot: ${selectedCard?.name}`, amount: servicePrice,
+            currency: 'INR', payment_method: paymentDetails?.method || 'test', payment_provider: paymentDetails?.provider || 'manual',
+            order_id: paymentDetails?.orderId || `ORD-${Date.now()}`, transaction_id: paymentDetails?.transactionId || `TXN-${Date.now()}`,
+            reading_id: readingId, status: 'success', metadata: { name: user?.name, card_name: selectedCard?.name, paymentTimestamp: new Date().toISOString() },
+          });
+        }
+      } catch (err) { console.error("❌ Tarot save error:", err); }
+    }, 'Tarot Reading', servicePrice);
+  }, [selectedCard, reading, user, openPayment, servicePrice]);
+
+  /**
+   * Explicit handler for "Unlock Full Reading"
+   */
+  const handleReadMore = async () => {
+    if (!reading || !selectedCard) return;
+    
+    setIsCheckingRegistry(true);
+    try {
+        const existing = await dbService.checkAlreadyPaid('tarot', { name: user?.name, card_name: selectedCard.name });
+        if (existing.exists) {
+            setRetrievedTx(existing.transaction);
+            setReading(existing.reading?.content || reading);
+            setIsPaid(false); 
+            setIsCheckingRegistry(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+    } catch (err) {
+        console.error("❌ Tarot registry check failed:", err);
+    } finally {
+        setIsCheckingRegistry(false);
+    }
+
+    proceedToPayment();
+  };
+
+  const resetReading = () => { setSelectedCard(null); setReading(''); setError(''); setIsPaid(false); setRetrievedTx(null); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return (
     <div className="flex flex-col gap-12 items-center">
       <div className="w-full max-w-7xl mx-auto px-4 relative min-h-screen pb-12">
           <SmartBackButton label={t('backToHome')} className="relative z-10 mb-4" />
+        
+        {retrievedTx && !isPaid && (
+          <div className={`
+            rounded-2xl p-6 mb-8 shadow-xl border-2 animate-fade-in-up
+            ${isLight 
+              ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300' 
+              : 'bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-green-500/40'
+            }
+          `}>
+            <div className="flex items-center justify-between gap-6">
+               <div>
+                  <h3 className={`font-cinzel font-black text-xl uppercase ${isLight ? 'text-emerald-800' : 'text-green-400'}`}>Already Purchased Today!</h3>
+                  <p className={`text-sm italic ${isLight ? 'text-emerald-700' : 'text-green-300/70'}`}>Sacred card draw retrieved from history.</p>
+               </div>
+               <div className="flex gap-2">
+                  <button onClick={() => setIsPaid(true)} className="bg-emerald-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest">📄 View Full</button>
+                  <button onClick={resetReading} className="bg-amber-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest">🆕 New Draw</button>
+               </div>
+            </div>
+          </div>
+        )}
+
         {!selectedCard && (
             <div className="relative z-10 mb-8 text-center animate-fade-in-up">
                 <h2 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-100 mb-4 font-cinzel drop-shadow-lg">{t('tarotReading')}</h2>
@@ -131,39 +240,30 @@ const Tarot: React.FC = () => {
             {shuffledDeck.map((card) => ( <TarotCard key={card.id} card={card} isSelected={false} onClick={(e) => handleCardSelect(card, e)} /> ))}
             </div>
         )}
-        {animatingCard && (
-            <div className="fixed z-[100] transition-all duration-[1000ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] perspective-1000" style={isAnimationFlying ? { top: '30%', left: '50%', width: '16rem', height: '24rem', transform: 'translate(-50%, -20%) rotateZ(360deg) scale(1.2)' } : { top: animatingCard.startRect.top, left: animatingCard.startRect.left, width: animatingCard.startRect.width, height: animatingCard.startRect.height, transform: 'translate(0, 0) rotateZ(0deg) scale(1)' }}>
-                <div className={`absolute -inset-4 bg-amber-500/20 rounded-full blur-2xl transition-opacity duration-500 ${isAnimationFlying ? 'opacity-100' : 'opacity-0'}`}></div>
-                <TarotCard card={animatingCard.card} isSelected={isAnimationFlipping} onClick={() => {}} />
-            </div>
-        )}
         {(isLoading || selectedCard) && !animatingCard && (
             <div ref={resultsRef} className="w-full max-w-5xl mx-auto animate-fade-in-up">
                 <div className="flex flex-col items-center gap-8">
-                    <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-amber-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-glow"></div>
-                        <div className="relative w-64 aspect-[2/3] transform transition-transform duration-500 hover:scale-105"> <TarotCard card={selectedCard!} isSelected={true} onClick={() => {}} /> </div>
-                    </div>
+                    <div className="relative group"><div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-amber-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-glow"></div><div className="relative w-64 aspect-[2/3] transform transition-transform duration-500 hover:scale-105"> <TarotCard card={selectedCard!} isSelected={true} onClick={() => {}} /> </div></div>
                     <div className="w-full">
-                        {isLoading && ( <div className="max-w-md mx-auto"> <ProgressBar progress={progress} message={prevLangRef.current !== language ? "Re-aligning Script..." : "Interpreting the Arcana..."} estimatedTime="Approx. 5 seconds" /> <SkeletonReport /> </div> )}
-                        {error && !isLoading && <InlineError message={error} onRetry={() => generateReading(selectedCard!)} />}
+                        {isLoading && ( <div className="max-w-md mx-auto"> <ProgressBar progress={progress} message="Interpreting the Arcana..." /> <SkeletonReport /> </div> )}
                         {reading && !isLoading && (
                             <div className="space-y-8">
-                                <div className="text-center">
-                                    <h3 className="text-3xl md:text-4xl font-bold text-amber-300 mb-2 font-cinzel">{selectedCard!.name}</h3>
-                                    <div className="text-amber-500 text-sm font-bold tracking-[0.3em] uppercase">{selectedCard!.type} Arcana</div>
-                                </div>
-                                {!isPaid ? (
-                                    <Card className="p-8 border-l-4 border-purple-500 bg-gray-900/80 shadow-[0_0_30px_rgba(139,92,246,0.15)]">
-                                        <div className="relative text-amber-100 leading-relaxed font-lora italic text-lg mb-8"> {reading.replace(/#/g, '').replace(/\*\*/g, '').split('\n').slice(0, 3).map((line, i) => ( <p key={i} className="mb-2">{line}</p> ))} <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-gray-900 to-transparent"></div> </div>
-                                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4 border-t border-gray-700"> <Button onClick={handleReadMore} className="w-full sm:w-auto px-8 bg-gradient-to-r from-amber-600 to-maroon-700 border-amber-400">{t('readMore')}</Button> <button onClick={resetReading} className="text-sm text-gray-400 hover:text-white underline font-cinzel tracking-widest uppercase">Draw Another Card</button> </div>
-                                    </Card>
-                                ) : (
+                                <div className="text-center"><h3 className="text-3xl md:text-4xl font-bold text-amber-300 mb-2 font-cinzel">{selectedCard!.name}</h3><div className="text-amber-500 text-sm font-bold tracking-[0.3em] uppercase">{selectedCard!.type} Arcana</div></div>
+                                {!isPaid && !retrievedTx ? (
+                                    <ServiceResult serviceName="TAROT" serviceIcon="🃏" previewText={reading} onRevealReport={handleReadMore} isAdmin={isAdmin} onAdminBypass={() => setIsPaid(true)} />
+                                ) : isPaid ? (
                                     <div className="w-full">
-                                        <ErrorBoundary> <FullReport reading={reading} category="tarot" title={selectedCard!.name} subtitle={`${selectedCard!.type} Arcana • Vedic Insight`} imageUrl={reportImage} /> </ErrorBoundary>
-                                        <div className="text-center mt-8"> <button onClick={resetReading} className="px-10 py-4 bg-gradient-to-r from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 text-amber-200 rounded-full border border-amber-500/30 font-bold transition-all transform hover:scale-105 shadow-xl uppercase font-cinzel tracking-[0.2em]">Draw Another Card</button> </div>
+                                        <ErrorBoundary> 
+                                          <FullReport 
+                                            reading={reading} 
+                                            category="tarot" 
+                                            title={selectedCard!.name} 
+                                            subtitle={`${selectedCard!.type} Arcana • Vedic Insight`} 
+                                            imageUrl={reportImage} 
+                                          /> 
+                                        </ErrorBoundary>
                                     </div>
-                                )}
+                                ) : null}
                             </div>
                         )}
                     </div>
@@ -171,6 +271,24 @@ const Tarot: React.FC = () => {
             </div>
         )}
       </div>
+
+      {isCheckingRegistry && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[250]">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-10 rounded-3xl shadow-2xl border border-amber-500/30 max-w-md text-center">
+            <div className="relative mb-8">
+              <div className="w-24 h-24 mx-auto">
+                <div className="absolute inset-0 border-4 border-amber-500/20 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-t-amber-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                <div className="absolute inset-3 border-4 border-amber-500/10 rounded-full"></div>
+                <div className="absolute inset-3 border-4 border-b-amber-400 border-t-transparent border-r-transparent border-l-transparent rounded-full animate-spin-reverse" style={{ animationDuration: '1.5s' }}></div>
+              </div>
+            </div>
+            <h3 className="text-3xl font-bold text-white mb-3 tracking-wide">Checking Registry</h3>
+            <p className="text-gray-300 mb-2 text-lg">Verifying your purchase history</p>
+            <p className="text-gray-500 text-sm mb-6">Scanning the celestial archives to identify your previous seal...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

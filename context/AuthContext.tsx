@@ -1,6 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 import { dbService, User, Reading } from '../services/db';
+import { reportStateManager } from '../services/reportStateManager';
 
 interface PendingReading {
   type: Reading['type'];
@@ -47,15 +49,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const dbHanging = useRef(false);
 
   const refreshUser = useCallback(async () => {
-    // 🛡️ PREVENT RECURSION & OVERLAPPING REFRESHES
     if (refreshInProgress.current) {
-      console.log('🔄 [Auth] Refresh already in progress, skipping...');
       return;
     }
     refreshInProgress.current = true;
 
     try {
-      // Emergency recovery check from local session
       const recoverySession = localStorage.getItem('glyph_admin_session');
       if (recoverySession) {
         try {
@@ -75,13 +74,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      // 1. Get current Supabase session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
-        // If the signal was aborted, don't throw a fatal exception
         if (sessionError.message?.toLowerCase().includes('abort') || sessionError.message?.toLowerCase().includes('signal')) {
-          console.warn('⚠️ [Auth] Session check aborted due to timeout.');
           refreshInProgress.current = false;
           setIsLoading(false);
           return;
@@ -107,7 +103,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(prev => (prev?.id === initialUser.id && prev.role === initialUser.role) ? prev : initialUser);
         setIsLoading(false);
 
-        // 🛡️ SOVEREIGN HANDSHAKE (Background)
         setIsAdminLoading(true);
         try {
             const verifiedAdmin = await dbService.checkIsAdmin();
@@ -116,12 +111,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setUser(prev => prev ? { ...prev, role: 'admin' } : null);
             }
         } catch (verifErr) {
-            console.warn("⚠️ [Auth] Sovereign Handshake slow or blocked.");
         } finally {
             setIsAdminLoading(false);
         }
 
-        // 2. Fetch profile and history if not hanging
         if (!dbHanging.current) {
             try {
                 const { data: profile } = await supabase.from('users').select('*').eq('id', session.user.id).maybeSingle();
@@ -131,9 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     setHistory(readings || []);
                 }
             } catch (e: any) {
-                if (e.message?.toLowerCase().includes('abort') || e.name === 'AbortError') {
-                    console.warn("⚠️ [Auth] Data fetch timed out, will retry on next interaction.");
-                } else {
+                if (!(e.message?.toLowerCase().includes('abort') || e.name === 'AbortError')) {
                     dbHanging.current = true;
                 }
             }
@@ -144,11 +135,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsLoading(false);
       }
     } catch (e: any) {
-      if (e.message?.toLowerCase().includes('abort') || e.name === 'AbortError') {
-        console.warn("⚠️ [Auth] User refresh aborted.");
-      } else {
-        console.error("💥 [Auth] Refresh Exception:", e);
-      }
       setIsLoading(false);
     } finally {
       refreshInProgress.current = false;
@@ -158,7 +144,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     refreshUser();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      console.log(`🔌 [Auth] Auth Event: ${event}`);
       if (['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) {
         await refreshUser();
       }
@@ -167,6 +152,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setHistory([]); 
         setIsAdminVerified(false);
         localStorage.removeItem('glyph_admin_session');
+        // Clear all report states on logout
+        ['astrology', 'numerology', 'palmistry', 'tarot', 'face-reading', 'gemstone', 'mantra', 'matchmaking', 'ayurveda', 'dream-analysis'].forEach(service => {
+          reportStateManager.clearReportState(service);
+        });
         setIsLoading(false);
       }
     });
@@ -178,7 +167,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      // Force immediate refresh state cleanup before calling refreshUser
       refreshInProgress.current = false; 
       await refreshUser();
     } finally {
@@ -191,6 +179,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
     setIsAdminVerified(false);
     setHistory([]);
+    // Clear reports
+    ['astrology', 'numerology', 'palmistry', 'tarot', 'face-reading', 'gemstone', 'mantra', 'matchmaking', 'ayurveda', 'dream-analysis'].forEach(service => {
+      reportStateManager.clearReportState(service);
+    });
     await supabase.auth.signOut();
   };
 
