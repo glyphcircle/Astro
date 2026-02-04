@@ -33,6 +33,29 @@ const ServiceResult: React.FC<ServiceResultProps> = ({
     return '✨';
   };
 
+  // Format preview text into bullet points (first 3-4 sentences only)
+  const formatPreview = (text: string) => {
+    // Split by asterisks or newlines, filter valid sentences
+    const sentences = text
+      .split(/[\*\n]/)
+      .map(s => s.trim())
+      .filter(s => s.length > 50 && s.length < 400)
+      .slice(0, 4); // Only first 4 points
+
+    return sentences.map((sentence) => {
+      const cleaned = sentence.replace(/^\[POSITIVE\]|\[NEGATIVE\]|^\*+/gi, '').trim();
+      const isPositive = /positive|gift|strength|success|fortune|lucky|blessed/i.test(sentence);
+      const isNegative = /negative|challenge|obstacle|difficulty|weakness|caution/i.test(sentence);
+      
+      return {
+        text: cleaned,
+        type: isPositive ? 'positive' : isNegative ? 'negative' : 'neutral'
+      };
+    });
+  };
+
+  const previewPoints = formatPreview(previewText);
+
   // Check if serviceIcon is a valid URL
   const isValidImageUrl = serviceIcon && serviceIcon.startsWith('http');
 
@@ -107,26 +130,39 @@ const ServiceResult: React.FC<ServiceResultProps> = ({
                 ? 'bg-amber-200 text-amber-900'
                 : 'bg-amber-900/50 text-amber-400'
             }`}>
-              {serviceName}
+              {serviceName.toUpperCase()}
             </div>
 
-            {/* Preview Text - Blurred Effect */}
-            <div className={`relative p-6 rounded-xl ${
-              isLight
-                ? 'bg-white/80 backdrop-blur-sm shadow-lg'
-                : 'bg-gray-800/50 backdrop-blur-sm shadow-xl'
-            }`}>
-              <p className={`text-lg md:text-xl leading-relaxed font-serif italic ${
-                isLight ? 'text-gray-700' : 'text-gray-300'
-              }`}>
-                &quot;{previewText}&quot;
-              </p>
+            {/* Preview Text - Formatted as Bullet Points */}
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {previewPoints.map((point, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
+                    isLight ? 'bg-gray-50' : 'bg-gray-800/50'
+                  }`}
+                >
+                  <span className={`text-xl flex-shrink-0 ${
+                    point.type === 'positive' ? 'text-green-600' :
+                    point.type === 'negative' ? 'text-red-600' :
+                    isLight ? 'text-amber-700' : 'text-amber-400'
+                  }`}>
+                    {point.type === 'positive' ? '✨' : 
+                     point.type === 'negative' ? '⚠️' : '🔮'}
+                  </span>
+                  <p className={`text-sm leading-relaxed ${
+                    isLight ? 'text-gray-700' : 'text-gray-300'
+                  }`}>
+                    {point.text}
+                  </p>
+                </div>
+              ))}
               
-              {/* Blur overlay gradient */}
-              <div className={`absolute bottom-0 left-0 right-0 h-24 pointer-events-none ${
+              {/* Blur overlay to indicate more content */}
+              <div className={`relative h-16 -mt-8 pointer-events-none ${
                 isLight
-                  ? 'bg-gradient-to-t from-white/90 to-transparent'
-                  : 'bg-gradient-to-t from-gray-800/90 to-transparent'
+                  ? 'bg-gradient-to-t from-white via-white/90 to-transparent'
+                  : 'bg-gradient-to-t from-gray-900 via-gray-900/90 to-transparent'
               }`} />
             </div>
 
@@ -144,16 +180,16 @@ const ServiceResult: React.FC<ServiceResultProps> = ({
 
             {/* Admin Bypass Button */}
             {isAdmin && onAdminBypass && (
-              <Button
+              <button
                 onClick={onAdminBypass}
-                className={`w-full py-3 text-sm font-medium transition-all ${
+                className={`w-full py-3 text-sm font-medium transition-all rounded-lg ${
                   isLight
                     ? 'bg-purple-100 hover:bg-purple-200 text-purple-900'
                     : 'bg-purple-900/50 hover:bg-purple-800/50 text-purple-300'
                 }`}
               >
                 👑 Admin Direct Access
-              </Button>
+              </button>
             )}
           </div>
         </div>

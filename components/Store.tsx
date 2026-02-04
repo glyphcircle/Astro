@@ -1,6 +1,5 @@
-
-import React, { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useDb } from '../hooks/useDb';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../hooks/useTranslation';
@@ -11,9 +10,10 @@ import Modal from './shared/Modal';
 import { cloudManager } from '../services/cloudManager';
 import OptimizedImage from './shared/OptimizedImage';
 import { useNotifications } from './PushNotifications';
+import SmartBackButton from './shared/SmartBackButton';
 
 interface CartItem {
-  id: number | string; // maps to store_item_id
+  id: number | string;
   serviceId: string;
   name: string;
   price: number;
@@ -37,6 +37,8 @@ const Store: React.FC = () => {
   const { openPayment } = usePayment();
   const { sendNotification } = useNotifications();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -51,6 +53,19 @@ const Store: React.FC = () => {
   
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const isAdmin = user?.role === 'admin';
+
+  const categoryParam = searchParams.get('category');
+  const productParam = searchParams.get('product');
+
+  useEffect(() => {
+    if (categoryParam) setSelectedCategory(categoryParam);
+    if (productParam) {
+      setTimeout(() => {
+        const element = document.getElementById(`product-${productParam}`);
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 500);
+    }
+  }, [categoryParam, productParam]);
 
   const categories: string[] = ['All', ...Array.from(new Set((db.store_items || []).map((i: any) => i.category || 'General'))) as string[]];
 
@@ -68,30 +83,18 @@ const Store: React.FC = () => {
   const isAddressValid = useMemo(() => Object.values(deliveryDetails).every((val: any) => val.trim().length > 0), [deliveryDetails]);
 
   const addToCart = (item: any) => {
-    const sId = item.store_item_id || item.id; // Correct ID mapping for new view
+    const sId = item.store_item_id || item.id;
     setCart(prev => {
       const existing = prev.find(i => i.id === sId);
-      
       if (existing && existing.quantity >= (item.stock || 999)) {
           setToastMessage(`Max stock reached for ${item.name}`);
           setTimeout(() => setToastMessage(null), 3000);
           return prev;
       }
-      
       if (existing) return prev.map(i => i.id === sId ? { ...i, quantity: i.quantity + 1 } : i);
-      
       const img = cloudManager.resolveImage(item.image_path || item.image_url);
-      return [...prev, { 
-        id: sId, 
-        serviceId: item.id, 
-        name: item.name, 
-        price: item.store_price || item.price, 
-        quantity: 1, 
-        image: img, 
-        stock: item.stock 
-      }];
+      return [...prev, { id: sId, serviceId: item.id, name: item.name, price: item.store_price || item.price, quantity: 1, image: img, stock: item.stock }];
     });
-    
     if (navigator.vibrate) navigator.vibrate(50);
     setToastMessage(`${item.name} added to cart ✨`);
     setTimeout(() => setToastMessage(null), 3000);
@@ -111,7 +114,6 @@ const Store: React.FC = () => {
   const handleCheckout = () => {
       if (!isAddressValid) return alert("Please fill in all delivery details.");
       const currentCart = [...cart];
-
       openPayment(async () => {
           const orderPayload = {
               user_id: user?.id || 'guest',
@@ -122,23 +124,15 @@ const Store: React.FC = () => {
               status: 'paid'
           };
           await createEntry('store_orders', orderPayload);
-
-          // Inventory sync using store_item_id
           for (const item of currentCart) {
               const dbItem = db.store_items.find((i:any) => (i.store_item_id || i.id) === item.id);
               if (dbItem) {
                   const newStock = Math.max(0, (dbItem.stock || 0) - item.quantity);
                   await updateEntry('store_items', dbItem.id, { stock: newStock });
-                  
-                  if (newStock < 5) {
-                      sendNotification("⚠️ Low Stock Alert", `${item.name} is running low (${newStock} left).`);
-                  }
+                  if (newStock < 5) sendNotification("⚠️ Low Stock Alert", `${item.name} is running low (${newStock} left).`);
               }
           }
-
-          setCart([]);
-          setIsCartOpen(false);
-          setCheckoutStep('cart'); 
+          setCart([]); setIsCartOpen(false); setCheckoutStep('cart'); 
           alert("Payment Successful! Shipping to " + deliveryDetails.city);
       }, 'Vedic Store Order', cartTotal);
   };
@@ -147,24 +141,15 @@ const Store: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-20 relative">
-      <button onClick={() => navigate('/home')} className="fixed top-20 left-4 z-30 bg-black/60 backdrop-blur border border-amber-500/30 text-amber-200 p-2 rounded-full shadow-lg md:hidden" title="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-      {toastMessage && (<div className="fixed bottom-24 right-4 md:top-24 md:bottom-auto z-50 bg-green-900/90 text-white px-6 py-3 rounded-lg shadow-[0_0_20px_rgba(34,197,94,0.4)] border border-green-500/50 flex items-center gap-3 animate-fade-in-up"><span className="text-xl">🛍️</span><span className="font-cinzel font-bold text-sm">{toastMessage}</span></div>)}
-
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 pt-4 md:pt-0">
         <div>
-            <Link to="/home" className="inline-flex items-center text-amber-200 hover:text-amber-400 transition-colors mb-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>{t('backToHome')}</Link>
-            <h2 className="text-3xl font-cinzel font-bold text-amber-300">Mystic Bazaar</h2>
+            <SmartBackButton className="mb-4" />
+            <h2 className="text-3xl font-cinzel font-black text-amber-300">Mystic Bazaar</h2>
             <p className="text-amber-200/60 font-lora text-sm">Authentic spiritual artifacts & variants.</p>
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto">
             <div className="relative flex-grow md:flex-grow-0">
-                <input 
-                    type="text" 
-                    placeholder="Search Artifacts..." 
-                    value={searchQuery} 
-                    onChange={(e) => setSearchQuery(e.target.value)} 
-                    className="w-full md:w-64 bg-black/40 border border-amber-500/30 rounded-full py-2 px-4 text-amber-100 focus:outline-none focus:border-amber-400 shadow-inner" 
-                />
+                <input type="text" placeholder="Search Artifacts..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full md:w-64 bg-black/40 border border-amber-500/30 rounded-full py-2 px-4 text-amber-100 focus:outline-none focus:border-amber-400 shadow-inner" />
             </div>
             <button onClick={openCart} className="relative bg-amber-600 hover:bg-amber-500 p-2.5 rounded-full text-white shadow-lg transition-all hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -173,27 +158,37 @@ const Store: React.FC = () => {
         </div>
       </div>
 
+      <div className="flex gap-2 mb-8 overflow-x-auto pb-2 no-scrollbar">
+          {categories.map(cat => (
+              <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${selectedCategory === cat ? 'bg-amber-600 border-amber-400 text-white' : 'bg-black/40 border-amber-500/20 text-amber-200/60 hover:text-amber-200'}`}>{cat}</button>
+          ))}
+      </div>
+
       {filteredItems.length === 0 ? <div className="text-center py-16 text-amber-200/40 italic font-lora">No artifacts detected in this realm.</div> : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredItems.map((item: any) => (
-                  <div key={item.store_item_id || item.id} className="group bg-gray-900 border border-amber-500/10 rounded-2xl overflow-hidden hover:border-amber-500/40 hover:shadow-2xl transition-all duration-500 flex flex-col">
-                      <div className="h-52 overflow-hidden relative">
-                          <OptimizedImage src={getImageUrl(item)} alt={item.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
-                          {item.stock < 5 && <span className="absolute bottom-2 right-2 bg-red-900/80 text-white text-[9px] font-bold px-2 py-1 rounded">LOW STOCK: {item.stock}</span>}
-                      </div>
-                      <div className="p-5 flex flex-col flex-grow bg-[#0c0c1a]">
-                          <div className="flex justify-between items-start mb-3">
-                              <h3 className="font-cinzel font-bold text-amber-100 leading-tight pr-2">{item.name}</h3>
-                              <span className="font-mono font-bold text-amber-400 shrink-0">{getRegionalPrice(item.store_price || item.price).display}</span>
-                          </div>
-                          <p className="text-xs text-gray-400 font-lora mb-6 line-clamp-2 italic leading-relaxed">{item.description || "A sacred tool for spiritual alignment."}</p>
-                          <Button onClick={() => addToCart(item)} disabled={item.stock <= 0} className="w-full mt-auto py-2.5 bg-gradient-to-r from-amber-700 to-amber-900 border-none shadow-xl hover:brightness-110">
-                              {item.stock > 0 ? "ADD TO CART" : "OUT OF STOCK"}
-                          </Button>
-                      </div>
-                  </div>
-              ))}
+              {filteredItems.map((item: any) => {
+                  const sId = item.store_item_id || item.id;
+                  const slug = item.name.toLowerCase().replace(/\s+/g, '-');
+                  return (
+                    <div id={`product-${slug}`} key={sId} className="group bg-gray-900 border border-amber-500/10 rounded-2xl overflow-hidden hover:border-amber-500/40 hover:shadow-2xl transition-all duration-500 flex flex-col">
+                        <div className="h-52 overflow-hidden relative">
+                            <OptimizedImage src={getImageUrl(item)} alt={item.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
+                            {item.stock < 5 && <span className="absolute bottom-2 right-2 bg-red-900/80 text-white text-[9px] font-bold px-2 py-1 rounded">LOW STOCK: {item.stock}</span>}
+                        </div>
+                        <div className="p-5 flex flex-col flex-grow bg-[#0c0c1a]">
+                            <div className="flex justify-between items-start mb-3">
+                                <h3 className="font-cinzel font-bold text-amber-100 leading-tight pr-2">{item.name}</h3>
+                                <span className="font-mono font-bold text-amber-400 shrink-0">{getRegionalPrice(item.store_price || item.price).display}</span>
+                            </div>
+                            <p className="text-xs text-gray-400 font-lora mb-6 line-clamp-2 italic leading-relaxed">{item.description || "A sacred tool for spiritual alignment."}</p>
+                            <Button onClick={() => addToCart(item)} disabled={item.stock <= 0} className="w-full mt-auto py-2.5 bg-gradient-to-r from-amber-700 to-amber-900 border-none shadow-xl hover:brightness-110">
+                                {item.stock > 0 ? "ADD TO CART" : "OUT OF STOCK"}
+                            </Button>
+                        </div>
+                    </div>
+                  );
+              })}
           </div>
       )}
 
@@ -227,12 +222,7 @@ const Store: React.FC = () => {
                           {['fullName', 'address', 'city', 'zip', 'phone'].map(field => (
                               <div key={field}>
                                   <label className="block text-[10px] text-gray-500 uppercase font-black mb-1.5 ml-1 tracking-widest">{field.replace(/([A-Z])/g, ' $1')}</label>
-                                  <input 
-                                    name={field} 
-                                    value={(deliveryDetails as any)[field]} 
-                                    onChange={handleDeliveryChange} 
-                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-amber-500 transition-all shadow-inner" 
-                                  />
+                                  <input name={field} value={(deliveryDetails as any)[field]} onChange={handleDeliveryChange} className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-white text-sm outline-none focus:border-amber-500 transition-all shadow-inner" />
                               </div>
                           ))}
                       </div>
@@ -256,4 +246,3 @@ const Store: React.FC = () => {
 };
 
 export default Store;
-

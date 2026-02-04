@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-// @ts-ignore
 import { Link } from 'react-router-dom';
 import { getPalmReading, translateText } from '../services/geminiService';
 import { calculatePalmistry, PalmAnalysis } from '../services/palmistryEngine';
@@ -13,6 +12,7 @@ import { useDb } from '../hooks/useDb';
 import { cloudManager } from '../services/cloudManager';
 import InlineError from './shared/InlineError';
 import Card from './shared/Card';
+import SmartBackButton from './shared/SmartBackButton';
 
 const Palmistry: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -26,8 +26,6 @@ const Palmistry: React.FC = () => {
   
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const videoRef = useRef<HTMLDivElement>(null);
-  // Fix: videoRef was incorrectly typed or used, we need an actual video element for camera
   const cameraRef = useRef<HTMLVideoElement>(null);
   const prevLangRef = useRef('');
 
@@ -46,7 +44,6 @@ const Palmistry: React.FC = () => {
   const servicePrice = serviceConfig?.price || 49;
   const reportImage = db.image_assets?.find((a: any) => a.id === 'report_bg_palmistry')?.path || "https://images.unsplash.com/photo-1542553457-3f92a3449339?q=80&w=800";
 
-  // --- AUTO TRANSLATE ON LANG CHANGE ---
   useEffect(() => {
     if (readingText && !isLoading && prevLangRef.current && prevLangRef.current !== language) {
         const handleLangShift = async () => {
@@ -122,26 +119,10 @@ const Palmistry: React.FC = () => {
 
   const handleReadMore = () => openPayment(() => setIsPaid(true), 'Palmistry Reading', servicePrice);
 
-  const renderAnalysisDashboard = () => {
-      if (!analysisData) return null;
-      return (
-          <div className="space-y-6 mt-6 animate-fade-in-up">
-              <div className="flex items-center justify-between bg-gradient-to-r from-gray-900 to-black p-4 rounded-lg border border-amber-500/30 shadow-lg">
-                  <div><span className="text-gray-400 text-[10px] uppercase tracking-widest block mb-1">Dominant Hand Type</span><span className="text-amber-300 font-cinzel font-bold text-xl">{analysisData.handType}</span></div>
-                  <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center border border-amber-500/20">✋</div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-black/30 p-4 rounded border border-amber-500/10 h-full"><h4 className="text-amber-400 font-bold text-xs uppercase tracking-widest mb-2 flex items-center gap-2"><span>❤️</span> Vitality & Health</h4><p className="text-sm text-gray-300 leading-relaxed italic">{analysisData.vedicInterpretation.vitality}</p></div>
-                  <div className="bg-black/30 p-4 rounded border border-amber-500/10 h-full"><h4 className="text-amber-400 font-bold text-xs uppercase tracking-widest mb-2 flex items-center gap-2"><span>⚖️</span> Destiny & Career</h4><p className="text-sm text-gray-300 leading-relaxed italic">{analysisData.vedicInterpretation.career}</p></div>
-              </div>
-          </div>
-      );
-  };
-
   return (
     <div className="flex flex-col gap-12 items-center">
       <div className="w-full max-w-4xl mx-auto p-4 md:p-6">
-          <Link to="/home" className="inline-flex items-center text-amber-200 hover:text-amber-400 transition-colors mb-6 group"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transform group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>{t('backToHome')}</Link>
+          <SmartBackButton label={t('backToHome')} className="mb-6" />
           <div className="text-center mb-8"><h2 className="text-3xl font-bold text-amber-300 mb-2">{t('aiPalmReading')}</h2><p className="text-amber-100/70">{t('uploadPalmPrompt')}</p></div>
           <div className="flex flex-col gap-8 items-center w-full">
               <div className="w-full max-w-md">
@@ -164,7 +145,6 @@ const Palmistry: React.FC = () => {
                 {error && !isLoading && <InlineError message={error} onRetry={handleGetReading} />}
                 {analysisData && !isLoading && (
                    <div className="space-y-8 animate-fade-in-up">
-                       {renderAnalysisDashboard()}
                        {!isPaid ? (
                            <Card className="p-6 border-l-4 border-amber-500 bg-gray-900/80">
                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-500/20"><span className="text-xl">🔮</span><h4 className="text-amber-300 font-cinzel font-bold text-sm">Vedic Insight Summary</h4></div>
@@ -175,7 +155,7 @@ const Palmistry: React.FC = () => {
                    </div>
                 )}
               </div>
-            </div>
+          </div>
       </div>
     </div>
   );
