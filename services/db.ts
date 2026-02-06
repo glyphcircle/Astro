@@ -206,36 +206,77 @@ export class SupabaseDatabase {
     }
   }
   
-  async saveReading(data: any) { 
-    return supabase.from('readings').insert(data).select().single(); 
+  async saveReading(readingData: any) {
+    console.log('💾 [DB] SAVE READING START:', readingData)
+    
+    try {
+      const { data, error } = await supabase
+        .from('readings')
+        .insert([readingData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ [DB] Save Reading FAILED:', {
+          message: error.message,
+          code: error.code,
+          hint: error.hint
+        })
+        throw error
+      }
+      
+      console.log('✅ [DB] Reading saved:', data?.id)
+      return { data, error: null };
+    } catch (err: any) {
+      console.error('💥 [DB] Save Reading ERROR:', err.message)
+      // FALLBACK: Save to localStorage if Supabase fails
+      const fallbackKey = `reading_fallback_${Date.now()}`
+      localStorage.setItem(fallbackKey, JSON.stringify(readingData))
+      console.log('💾 Saved to localStorage fallback:', fallbackKey)
+      return { data: { ...readingData, id: fallbackKey }, error: err };
+    }
   }
 
-  compareInputs(serviceType: string, current: any, stored: any): boolean {
-    if (!current || !stored) return false;
-    const norm = (v: any) => String(v || '').toLowerCase().trim();
-
-    try {
-      if (serviceType === 'astrology') {
-        return (
-          norm(current.name) === norm(stored.name) &&
-          norm(current.dob) === norm(stored.dob) &&
-          norm(current.tob) === norm(stored.tob) &&
-          norm(current.pob) === norm(stored.pob)
-        );
+  normalizeInputs(serviceType: string, rawInputs: any) {
+    const normalized = { ...rawInputs }
+    
+    // 🔧 DATE NORMALIZATION (all formats → YYYY-MM-DD)
+    if (normalized.dob) {
+      const dateStr = normalized.dob.toString()
+      let parsed: Date | null = null
+      
+      const ddmmyyyy = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/)
+      if (ddmmyyyy) {
+        parsed = new Date(`${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`)
       }
-      if (serviceType === 'numerology') {
-        return norm(current.name) === norm(stored.name) && norm(current.dob) === norm(stored.dob);
+      
+      const mmddyyyy = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+      if (mmddyyyy) {
+        parsed = new Date(`${mmddyyyy[3]}-${mmddyyyy[1]}-${mmddyyyy[2]}`)
       }
-      if (serviceType === 'palmistry') {
-        return norm(current.name) === norm(stored.name) && norm(current.dob) === norm(stored.dob);
+      
+      if (!parsed && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        parsed = new Date(dateStr)
       }
-      if (serviceType === 'tarot') {
-        return norm(current.name) === norm(stored.name) && norm(current.card_name || current.question) === norm(stored.card_name || stored.question);
+      
+      if (parsed && !isNaN(parsed.getTime())) {
+        normalized.dob = parsed.toISOString().split('T')[0]
       }
-    } catch (e) {
-      return false;
     }
-    return false;
+    
+    if (normalized.name) {
+      normalized.name = normalized.name.trim().toLowerCase()
+    }
+    
+    if (normalized.pob) {
+      normalized.pob = normalized.pob.trim().toLowerCase()
+    }
+    
+    if (normalized.tob) {
+      normalized.tob = normalized.tob.replace(/\s+/g, '')
+    }
+    
+    return normalized
   }
 
   async checkAlreadyPaid(serviceType: string, formInputs: Record<string, any>) {
@@ -243,7 +284,9 @@ export class SupabaseDatabase {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { exists: false };
 
+      const inputs = this.normalizeInputs(serviceType, formInputs);
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
       const { data: txs, error } = await supabase
         .from('transactions')
         .select('*')
@@ -256,7 +299,25 @@ export class SupabaseDatabase {
       if (error || !txs) return { exists: false };
 
       for (const tx of txs) {
-        if (this.compareInputs(serviceType, formInputs, tx.metadata)) {
+        const storedInputs = this.normalizeInputs(serviceType, tx.metadata || {});
+        
+        let isMatch = false;
+        if (serviceType === 'astrology') {
+          isMatch = (
+            storedInputs.name === inputs.name &&
+            storedInputs.dob === inputs.dob &&
+            storedInputs.tob === inputs.tob &&
+            storedInputs.pob === inputs.pob
+          );
+        } else if (serviceType === 'numerology') {
+          isMatch = (storedInputs.name === inputs.name && storedInputs.dob === inputs.dob);
+        } else if (serviceType === 'palmistry') {
+          isMatch = (storedInputs.name === inputs.name && storedInputs.dob === inputs.dob);
+        } else if (serviceType === 'tarot') {
+          isMatch = (storedInputs.name === inputs.name && (storedInputs.card_name === inputs.card_name || storedInputs.question === inputs.question));
+        }
+
+        if (isMatch) {
           let readingData = null;
           if (tx.reading_id) {
             const { data } = await supabase.from('readings').select('*').eq('id', tx.reading_id).single();

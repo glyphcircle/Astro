@@ -26,13 +26,13 @@ interface NumerologyAstrologyProps {
 const NumerologyAstrology: React.FC<NumerologyAstrologyProps> = ({ mode }) => {
   const reportPreviewRef = useRef<HTMLDivElement>(null);
   const paymentProcessingRef = useRef(false);
-  const paymentSectionRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({ name: '', dob: '', pob: '', tob: '' });
   const [coords, setCoords] = useState<{ lat: number, lng: number } | null>(null);
   const [reading, setReading] = useState('');
   const [advancedReport, setAdvancedReport] = useState<any>(null);
   const [engineData, setEngineData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Channeling...');
   const [error, setError] = useState('');
   const [isPaid, setIsPaid] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -140,6 +140,7 @@ const NumerologyAstrology: React.FC<NumerologyAstrologyProps> = ({ mode }) => {
     }
 
     setIsLoading(true);
+    setLoadingMessage('Consulting the Oracle...');
     setError('');
     setReading('');
     setAdvancedReport(null);
@@ -171,150 +172,129 @@ const NumerologyAstrology: React.FC<NumerologyAstrologyProps> = ({ mode }) => {
   }, [formData, mode, language, coords]);
 
   const proceedToPayment = useCallback(() => {
-  // Lock check
-  if (paymentProcessingRef.current) {
-    console.warn('⚠️ Payment already in progress, ignoring duplicate call');
-    return;
-  }
+    if (paymentProcessingRef.current || isCheckingRegistry) return;
 
-  if (isCheckingRegistry) return;
-
-  if (alreadyPaid && showCachedReport) {
-    setIsPaid(true);
-    setShowCachedReport(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
-
-  const title = mode === 'astrology' ? 'Your Astrology Destiny' : 'Your Numerology Summary';
-  const price = mode === 'astrology' ? 99 : 49;
-
-  paymentProcessingRef.current = true;
-  console.log('🔒 [Payment] Processing locked');
-
-  openPayment(async (paymentDetails?: any) => {
-    try {
-      console.log('💳 [Payment] Callback triggered with details:', paymentDetails);
-      
-      setPaymentSuccess(true);
+    if (alreadyPaid && showCachedReport) {
       setIsPaid(true);
+      setShowCachedReport(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
-      // Generate unique IDs
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substr(2, 9);
-      const orderId = paymentDetails?.orderId || `ORD-${user?.id?.substr(0, 8)}-${mode}-${timestamp}-${randomId}`;
-      const transactionId = paymentDetails?.transactionId || `TXN-${timestamp}-${randomId}`;
+    const title = mode === 'astrology' ? 'Your Astrology Destiny' : 'Your Numerology Summary';
+    const price = mode === 'astrology' ? 99 : 49;
 
-      console.log('💾 [Payment] Saving reading...');
+    paymentProcessingRef.current = true;
 
-      // Save reading
-      const savedReading = await dbService.saveReading({
-        user_id: user?.id,
-        type: mode,
-        title: `${mode.toUpperCase()} Reading for ${formData.name}`,
-        subtitle: formData.dob,
-        content: reading,
-        meta_data: engineData,
-        is_paid: true,
-      });
+    openPayment(async (paymentDetails?: any) => {
+      console.log('💳 [NumerologyAstrology] Payment successful. Beginning report generation.');
+      setIsLoading(true);
+      setLoadingMessage('Securing transaction...');
 
-      const readingId = savedReading?.data?.id;
-      console.log('✅ [Payment] Reading saved:', readingId);
-      
-      if (readingId) {
-        console.log('💾 [Payment] Recording transaction...');
+      try {
+        const orderId = paymentDetails?.orderId || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
         
-        const txResult = await dbService.recordTransaction({
+        // 1. Save reading to DB
+        console.log('💾 [NumerologyAstrology] Saving reading to registry...');
+        const savedReading = await dbService.saveReading({
           user_id: user?.id,
-          service_type: mode,
-          service_title: title,
-          amount: price,
-          currency: 'INR',
-          payment_method: paymentDetails?.method || 'test',
-          payment_provider: paymentDetails?.provider || 'manual',
-          order_id: orderId,
-          transaction_id: transactionId,
-          reading_id: readingId,
-          status: 'success',
-          metadata: { ...formData, paymentTimestamp: new Date().toISOString() },
+          type: mode,
+          title: `${mode.toUpperCase()} Reading for ${formData.name}`,
+          subtitle: formData.dob,
+          content: reading,
+          meta_data: engineData,
+          is_paid: true,
         });
 
-        if (txResult?.error) {
-          console.error('❌ [Payment] Transaction recording failed:', txResult.error);
-        } else {
-          console.log('✅ [Payment] Transaction recorded:', txResult.data?.id);
-        }
-      } else {
-        console.error('❌ [Payment] No reading ID, skipping transaction');
-      }
-
-      // Save state
-      reportStateManager.saveReportState(mode, {
-        formData,
-        reading,
-        advancedReport: null,
-        engineData,
-        isPaid: true
-      });
-
-      console.log('📜 [Payment] Scrolling to top...');
-      
-      // ✅ SCROLL TO TOP AFTER PAYMENT
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        console.log('✅ [Payment] Scrolled to top');
-      }, 500);
-
-      // Generate advanced report for astrology
-      if (mode === 'astrology' && !advancedReport) {
-        setIsLoading(true);
-        console.log('📊 [Payment] Generating advanced astrology report...');
-        
-        try {
-          const report = await generateAdvancedAstroReport({
-            ...formData,
-            language: getLanguageName(language)
-          }, engineData);
-          
-          setAdvancedReport(report);
-          console.log('✅ [Payment] Advanced report generated');
-          
-          reportStateManager.saveReportState(mode, {
-            formData,
-            reading,
-            advancedReport: report,
-            engineData,
-            isPaid: true
+        // 2. Record transaction
+        if (savedReading?.data?.id) {
+          console.log('📝 [NumerologyAstrology] Recording transaction...');
+          await dbService.recordTransaction({
+            user_id: user?.id,
+            service_type: mode,
+            service_title: title,
+            amount: price,
+            currency: 'INR',
+            payment_method: paymentDetails?.method || 'test',
+            payment_provider: paymentDetails?.provider || 'manual',
+            order_id: orderId,
+            reading_id: savedReading.data.id,
+            status: 'success',
+            metadata: { ...formData, paymentTimestamp: new Date().toISOString() },
           });
-        } catch (e) {
-          console.error("❌ [Payment] Advanced report failed:", e);
-        } finally {
-          setIsLoading(false);
         }
+
+        // 3. Generate Advanced Report BEFORE setting isPaid (to show loading UX)
+        let generatedReport = null;
+        if (mode === 'astrology') {
+          console.log('📊 [NumerologyAstrology] Generating Advanced Astrology Report...');
+          setLoadingMessage('Analyzing planetary positions...');
+          
+          const progressInterval = setInterval(() => {
+            const messages = [
+              'Calculating Dasha periods...',
+              'Interpreting 12 houses...',
+              'Evaluating yogas and combinations...',
+              'Analyzing career and wealth paths...',
+              'Mapping relationship synergy...',
+              'Formulating ritualistic remedies...',
+              'Finalizing 3000-word destiny decree...'
+            ];
+            setLoadingMessage(messages[Math.floor(Math.random() * messages.length)]);
+          }, 4500);
+
+          try {
+            const report = await generateAdvancedAstroReport({ ...formData, language: getLanguageName(language) }, engineData);
+            generatedReport = report;
+            setAdvancedReport(report);
+            console.log('✅ [NumerologyAstrology] Advanced Report manifested.');
+          } catch (e: any) {
+            console.error("❌ [NumerologyAstrology] Advanced report failed:", e.message);
+            setError(`Manifestation took too long. Showing base report.`);
+          } finally {
+            clearInterval(progressInterval);
+          }
+        }
+
+        // 4. Update states
+        setPaymentSuccess(true);
+        setIsPaid(true);
+        setIsLoading(false);
+
+        // 5. Persist to State Manager
+        reportStateManager.saveReportState(mode, {
+          formData, 
+          reading, 
+          advancedReport: generatedReport, 
+          engineData, 
+          isPaid: true
+        });
+
+        // 6. AUTO-SCROLL TO TOP
+        console.log('📜 [NumerologyAstrology] Scrolling to top of report.');
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 800);
+
+      } catch (dbErr: any) {
+        console.error("❌ [NumerologyAstrology] Processing error:", dbErr);
+        setError(`An error occurred: ${dbErr.message}`);
+        setIsLoading(false);
+      } finally {
+        setTimeout(() => { paymentProcessingRef.current = false; }, 2000);
       }
-
-      console.log('✅ [Payment] All operations completed successfully');
-
-    } catch (dbErr: any) {
-      console.error("❌ [Payment] Database sync error:", dbErr);
-      console.error('Error details:', dbErr.message, dbErr.code);
-      alert('Payment successful but saving failed. Please contact support with this error: ' + dbErr.message);
-    } finally {
-      // Unlock after 2 seconds
-      setTimeout(() => {
-        paymentProcessingRef.current = false;
-        console.log('🔓 [Payment] Processing unlocked');
-      }, 2000);
-    }
-  }, title, price);
-}, [mode, formData, reading, engineData, user, openPayment, language, advancedReport, isCheckingRegistry, alreadyPaid, showCachedReport]);
-
+    }, title, price);
+  }, [mode, formData, reading, engineData, user, openPayment, language, alreadyPaid, showCachedReport]);
 
   const handleReadMore = async () => {
     if (!reading) return;
     const matchFound = await checkRegistryForExistingReport();
     if (!matchFound) proceedToPayment();
-    else window.scrollTo({ top: 0, behavior: 'smooth' });
+    else {
+      setIsPaid(true);
+      setShowCachedReport(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   return (
@@ -329,14 +309,20 @@ const NumerologyAstrology: React.FC<NumerologyAstrologyProps> = ({ mode }) => {
               <p className={`text-sm italic font-lora ${isLight ? 'text-emerald-700' : 'text-green-300/70'}`}>Retrieved from your sacred registry.</p>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { setIsPaid(true); setShowCachedReport(false); }} className="bg-emerald-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase">View Report</button>
+              <button onClick={() => { setIsPaid(true); setShowCachedReport(false); window.scrollTo({top:0, behavior:'smooth'}); }} className="bg-emerald-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase">View Report</button>
               <button onClick={handleResetForNewReading} className="bg-amber-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase">New Reading</button>
             </div>
           </div>
         </div>
       )}
 
-      {!isPaid && (
+      {paymentSuccess && isPaid && !isLoading && (
+        <div className="mb-6 p-4 bg-green-900/20 text-green-400 rounded-xl border border-green-500/30 text-center font-bold animate-fade-in-up">
+           ✅ Decree Unlocked. Your complete Imperial Report is visible below.
+        </div>
+      )}
+
+      {!isPaid && !isLoading && (
         <Card className="mb-10 p-10 border-2 shadow-2xl transition-all duration-500">
           <h2 className="text-4xl font-cinzel font-black text-center mb-12 tracking-widest uppercase">{mode === 'astrology' ? t('astrologyReading') : t('numerologyReading')}</h2>
           <form onSubmit={handleGetReading} className="grid md:grid-cols-2 gap-8">
@@ -362,11 +348,13 @@ const NumerologyAstrology: React.FC<NumerologyAstrologyProps> = ({ mode }) => {
       )}
 
       <div ref={reportPreviewRef}>
-        {isLoading && !isPaid ? <ReportLoader /> : !isPaid && reading ? (
-          <ServiceResult serviceName={mode.toUpperCase()} serviceIcon={mode === 'astrology' ? '⭐' : '🔢'} previewText={reading} onRevealReport={handleReadMore} isAdmin={isAdmin} onAdminBypass={() => setIsPaid(true)} />
+        {isLoading ? (
+          <ReportLoader />
+        ) : !isPaid && reading ? (
+          <ServiceResult serviceName={mode.toUpperCase()} serviceIcon={mode === 'astrology' ? '⭐' : '🔢'} previewText={reading} onRevealReport={handleReadMore} isAdmin={isAdmin} onAdminBypass={() => { setIsPaid(true); window.scrollTo({top:0, behavior:'smooth'}); }} />
         ) : isPaid && engineData ? (
           mode === 'astrology' 
-            ? <EnhancedAstrologyReport data={{ ...engineData, userName: formData.name, birthDate: formData.dob }} onDownload={handleDownloadPDF} />
+            ? <EnhancedAstrologyReport data={{ ...engineData, userName: formData.name, birthDate: formData.dob, advancedReport: advancedReport?.fullReportText }} onDownload={handleDownloadPDF} />
             : <EnhancedNumerologyReport reading={reading} engineData={engineData} userName={formData.name} birthDate={formData.dob} onDownload={handleDownloadPDF} />
         ) : null}
       </div>

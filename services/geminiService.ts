@@ -225,113 +225,59 @@ export const getAstroNumeroReading = async (details: any): Promise<{ reading: st
   return { reading: response.text || "The stars are currently silent." };
 };
 
-export const generateAdvancedAstroReport = async (details: any, chartData: any): Promise<any> => {
+export const generateAdvancedAstroReport = async (details: any, engineData: any): Promise<any> => {
+  console.log('🚀 [Gemini] Generating Advanced 3000-word Report for:', details.name);
   const ai = getAi();
-  const seed = generateDeterministicSeed(details.name + details.dob);
   
-  const prompt = `You are a highly experienced Vedic astrologer with deep knowledge of traditional Jyotish principles. Generate a comprehensive, personalized Vedic astrology report in ${details.language}.
-  
-  **Birth Details:**
-  - Name: ${details.name}
-  - Date of Birth: ${details.dob}
-  - Time of Birth: ${details.tob}
-  - Place of Birth: ${details.pob}
-  - Calculated Chart Data: ${JSON.stringify(chartData)}
-  
-  Use Lahiri Ayanamsa, Sidereal zodiac. Include predictions for ${new Date().getFullYear()} and next 5 years.
-  Provide deep psychological and spiritual guidance.`;
+  const prompt = `Generate a comprehensive Vedic astrology report for ${details.name} born on ${details.dob}.
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: prompt,
-    config: {
-      seed,
-      temperature: 0.7,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          basicInfo: {
-            type: Type.OBJECT,
-            properties: {
-              sunSign: { type: Type.STRING },
-              moonSign: { type: Type.STRING },
-              ascendant: { type: Type.STRING },
-              nakshatra: { type: Type.STRING },
-              nakshatraPada: { type: Type.STRING },
-              nakshatraLord: { type: Type.STRING },
-              tithi: { type: Type.STRING },
-              yoga: { type: Type.STRING },
-              varna: { type: Type.STRING },
-              yoni: { type: Type.STRING },
-              gana: { type: Type.STRING }
-            }
-          },
-          planetaryPositions: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                planet: { type: Type.STRING },
-                sign: { type: Type.STRING },
-                degree: { type: Type.STRING },
-                house: { type: Type.INTEGER },
-                strength: { type: Type.STRING },
-                dignity: { type: Type.STRING }
-              }
-            }
-          },
-          houseAnalysis: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                house: { type: Type.INTEGER },
-                significance: { type: Type.STRING },
-                interpretation: { type: Type.STRING }
-              }
-            }
-          },
-          yogasPresent: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                yogaName: { type: Type.STRING },
-                description: { type: Type.STRING },
-                effects: { type: Type.STRING }
-              }
-            }
-          },
-          lifeAreas: {
-            type: Type.OBJECT,
-            properties: {
-              personality: { type: Type.OBJECT, properties: { summary: { type: Type.STRING }, detailed: { type: Type.STRING } } },
-              career: { type: Type.OBJECT, properties: { advice: { type: Type.STRING }, detailed: { type: Type.STRING } } },
-              finance: { type: Type.OBJECT, properties: { advice: { type: Type.STRING }, detailed: { type: Type.STRING } } },
-              relationships: { type: Type.OBJECT, properties: { familyLife: { type: Type.STRING }, detailed: { type: Type.STRING } } }
-            }
-          },
-          remedies: {
-            type: Type.OBJECT,
-            properties: {
-              gemstones: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { stone: { type: Type.STRING }, purpose: { type: Type.STRING } } } },
-              mantras: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { mantra: { type: Type.STRING }, purpose: { type: Type.STRING } } } }
-            }
-          },
-          summary: {
-            type: Type.OBJECT,
-            properties: {
-              overallAssessment: { type: Type.STRING },
-              lifeAdvice: { type: Type.STRING }
-            }
-          }
-        }
+Birth Details:
+- Ascendant: ${engineData.lagna?.signName}
+- Moon Sign: ${engineData.panchang?.nakshatra} (Rashi)
+- Sun Sign: ${engineData.planets?.find((p: any) => p.name === 'Sun')?.signName}
+- Nakshatra: ${engineData.lagna?.nakshatra}
+- Planetary Positions: ${JSON.stringify(engineData.planets)}
+
+Create a detailed report with these sections:
+
+1. BIRTH CHART OVERVIEW (300 words)
+2. PLANETARY POSITIONS & STRENGTH (500 words)
+3. HOUSE ANALYSIS - All 12 Houses (800 words)
+4. DASHA PERIODS & TIMELINE (300 words)
+5. CAREER & PROFESSION (400 words)
+6. RELATIONSHIPS & MARRIAGE (400 words)
+7. HEALTH & VITALITY (300 words)
+8. FINANCIAL PROSPECTS (300 words)
+9. SPIRITUAL PATH (200 words)
+10. FAVORABLE PERIODS (200 words)
+11. CHALLENGES & REMEDIES (300 words)
+12. YOGAS & COMBINATIONS (200 words)
+
+Use markdown formatting. Be detailed and specific. Use user's name ${details.name} throughout. Language: ${details.language}. Total: minimum 3000 words.`;
+
+  // Timeout logic - 25 seconds
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: prompt,
+      config: {
+        temperature: 0.8,
+        thinkingConfig: { thinkingBudget: 4000 }
       }
-    }
-  });
+    });
 
-  return JSON.parse(response.text || "{}");
+    clearTimeout(timeoutId);
+    return { fullReportText: response.text };
+  } catch (error: any) {
+    console.error('❌ [Gemini] Advanced Report failed:', error);
+    if (error.name === 'AbortError') {
+      throw new Error('Celestial timeout: The stars took too long to align. Please retry.');
+    }
+    throw error;
+  }
 };
 
 export const translateText = async (text: string, targetLanguage: string): Promise<string> => {
