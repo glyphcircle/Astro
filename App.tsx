@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 
-// Component imports
+// Component imports - using relative paths for stability
 import Home from './components/Home';
 import Palmistry from './components/Palmistry';
 import Login from './components/Login';
@@ -55,7 +55,6 @@ import ContextDbNavigator from './components/ContextDbNavigator';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 import MobileNavBar from './components/MobileNavBar';
 import { useDevice } from './hooks/useDevice';
-
 
 // Idle Cursor Component
 const IdleCursor: React.FC = () => {

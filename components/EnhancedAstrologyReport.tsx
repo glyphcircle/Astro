@@ -3,7 +3,6 @@ import { useTheme } from '../context/ThemeContext';
 import BirthChartSVG from './charts/BirthChartSVG';
 import GemstoneRecommendation from './report-sections/GemstoneRecommendation';
 import RemedySection from './report-sections/RemedySection';
-import ConsultationBooking from './report-sections/ConsultationBooking';
 import SmartBackButton from './shared/SmartBackButton';
 import { Link } from 'react-router-dom';
 import Button from './shared/Button';
@@ -13,13 +12,16 @@ interface EnhancedAstrologyReportProps {
   onDownload?: () => void;
 }
 
-const EnhancedAstrologyReport: React.FC<EnhancedAstrologyReportProps> = ({ data, onDownload }) => {
+const EnhancedAstrologyReport: React.FC<EnhancedAstrologyReportProps> = ({ 
+  data, 
+  onDownload 
+}) => {
   const { theme } = useTheme();
   const isLight = theme.mode === 'light';
 
   return (
     <div 
-      id="astrology-report-content" // 🔑 Standardized ID
+      id="astrology-report-content"
       className="enhanced-report-stack min-h-screen w-full flex flex-col items-center justify-start pt-16 pb-24 px-4 sm:px-8 bg-[#050112]"
     >
       <section className="report-page bg-[#fffcf0] shadow-2xl rounded-sm">
@@ -93,10 +95,6 @@ const EnhancedAstrologyReport: React.FC<EnhancedAstrologyReportProps> = ({ data,
 
         <section className="w-full max-w-4xl p-8 bg-[#fffcf0] shadow-xl rounded-2xl border border-amber-200">
            <RemedySection remedies={data.recommendations.remedies} userName={data.userName} />
-        </section>
-
-        <section className="w-full max-w-4xl">
-           <ConsultationBooking />
         </section>
       </div>
 

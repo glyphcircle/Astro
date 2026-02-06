@@ -9,13 +9,17 @@ interface PDFOptions {
 }
 
 /**
- * Generate PDF from HTML element with improved pagination and margin control.
- * Optimized to remove blank pages, hide interactive elements, and handle page breaks better.
+ * ✅ UNIVERSAL PDF GENERATOR
+ * Works for ALL services: Numerology, Astrology, Palmistry, Tarot, Face Reading, Dream Analysis
+ * 
+ * Usage:
+ * await generatePDF('service-report-content', { 
+ *   filename: 'report.pdf',
+ *   quality: 0.9,
+ *   marginSide: 10 
+ * });
  */
-export const generatePDF = async (
-  elementId: string,
-  options: PDFOptions = {}
-): Promise<void> => {
+export const generatePDF = async (elementId: string, options: PDFOptions = {}): Promise<void> => {
   const {
     filename = 'report.pdf',
     quality = 0.95,
@@ -24,121 +28,58 @@ export const generatePDF = async (
   } = options;
 
   try {
-    console.log('📄 Starting optimized PDF generation for:', elementId);
-    const original = document.getElementById(elementId);
-    
+    console.log('📄 [PDF] Starting universal generation for:', elementId);
+
+    // ============================================
+    // STEP 1: INTELLIGENT ELEMENT VALIDATION
+    // ============================================
+    const original = await waitForElementWithContent(elementId);
     if (!original) {
-      throw new Error(`Element with ID "${elementId}" not found in DOM`);
+      throw new Error(`Element #${elementId} not found or has no content`);
     }
 
-    // Show loading indicator
-    const loadingDiv = document.createElement('div');
-    loadingDiv.id = 'pdf-loading';
-    loadingDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                  background: rgba(0,0,0,0.9); color: white; padding: 30px 50px; 
-                  border-radius: 12px; z-index: 99999; text-align: center;">
-        <div style="font-size: 20px; font-weight: 600; margin-bottom: 10px;">Generating Decree</div>
-        <div style="font-size: 14px; opacity: 0.8;">Trimming margins & aligning destiny...</div>
-      </div>
-    `;
+    console.log('✅ [PDF] Element validated:', {
+      id: elementId,
+      height: original.offsetHeight,
+      width: original.offsetWidth,
+      children: original.children.length
+    });
+
+    // ============================================
+    // STEP 2: SHOW LOADING INDICATOR
+    // ============================================
+    const loadingDiv = createLoadingIndicator();
     document.body.appendChild(loadingDiv);
 
-    // 1. Prepare a clean clone for capture
-    const wrapper = document.createElement('div');
-    wrapper.id = 'pdf-capture-wrapper';
-    wrapper.style.position = 'fixed';
-    wrapper.style.left = '-10000px';
-    wrapper.style.top = '0';
-    wrapper.style.width = '210mm';
-    wrapper.style.background = '#ffffff';
-    wrapper.style.padding = '0';
-    wrapper.style.margin = '0';
+    // Small delay to ensure loading indicator renders
+    await delay(100);
 
+    // ============================================
+    // STEP 3: CREATE OPTIMIZED CLONE
+    // ============================================
+    const wrapper = createPDFWrapper();
     const clone = original.cloneNode(true) as HTMLElement;
 
-    // Normalize clone margins/paddings
-    clone.style.margin = '0';
-    clone.style.padding = '0';
-    clone.style.width = '100%';
-
-    // *** FIX 1: HIDE ALL INTERACTIVE ELEMENTS ***
-    const interactiveSelectors = [
-      'button',
-      '.download-button',
-      '.no-print',
-      '[class*="button"]',
-      '[type="submit"]',
-      'input',
-      'textarea',
-      'select',
-      '.interactive-element'
-    ];
-    
-    interactiveSelectors.forEach(selector => {
-      const elements = clone.querySelectorAll(selector);
-      elements.forEach(el => {
-        (el as HTMLElement).style.display = 'none';
-      });
-    });
-
-    // *** FIX 2: HIDE SPECIFIC BUTTONS BY TEXT CONTENT ***
-    const allButtons = clone.querySelectorAll('*');
-    allButtons.forEach(el => {
-      const text = el.textContent?.trim().toUpperCase() || '';
-      if (
-        text.includes('DOWNLOAD') ||
-        text.includes('GET KIT') ||
-        text.includes('SEND QUERY') ||
-        text.includes('LISTEN AUDIO') ||
-        el.tagName === 'BUTTON'
-      ) {
-        (el as HTMLElement).style.display = 'none';
-      }
-    });
-
-    // Override specific layout classes that push content down
-    const centeredElements = clone.querySelectorAll('.justify-center');
-    centeredElements.forEach(el => {
-      (el as HTMLElement).style.justifyContent = 'flex-start';
-    });
-
-    // *** FIX 3: BETTER PAGE BREAK HANDLING ***
-    const fullHeightSections = clone.querySelectorAll('.min-h-screen, .min-h-\\[297mm\\]');
-    fullHeightSections.forEach(el => {
-      const page = el as HTMLElement;
-      page.style.minHeight = 'auto'; // Changed from fixed height
-      page.style.paddingTop = '15mm';
-      page.style.paddingBottom = '15mm'; // Added bottom padding
-      page.style.marginBottom = '0';
-      page.style.pageBreakInside = 'avoid'; // CSS hint for better breaks
-    });
-
-    // *** FIX 4: ADD PAGE BREAK HINTS TO SECTIONS ***
-    const sections = clone.querySelectorAll('section, .section-container, [class*="section"]');
-    sections.forEach(el => {
-      const section = el as HTMLElement;
-      section.style.pageBreakInside = 'avoid';
-      section.style.breakInside = 'avoid';
-    });
-
-    // Target the specific report wrapper internal padding
-    const contentWrapper = clone.querySelector('.content-wrapper') as HTMLElement;
-    if (contentWrapper) {
-      contentWrapper.style.paddingTop = '10mm';
-      contentWrapper.style.marginTop = '0';
-    }
+    // Normalize clone for PDF capture
+    normalizeCloneForPDF(clone);
 
     wrapper.appendChild(clone);
     document.body.appendChild(wrapper);
 
-    // Wait for fonts and images to load
-    await document.fonts.ready;
-    await new Promise(resolve => setTimeout(resolve, 800)); // Increased wait time
+    // Wait for fonts, images, and layout stabilization
+    await Promise.all([
+      document.fonts.ready,
+      waitForImages(wrapper),
+      delay(800) // Allow complex layouts to stabilize
+    ]);
 
-    // 2. Capture the element as canvas
+    console.log('✅ [PDF] Clone prepared and stabilized');
+
+    // ============================================
+    // STEP 4: CAPTURE AS CANVAS
+    // ============================================
     const canvas = await html2canvas(wrapper, {
-      scale: 2,
+      scale: 2, // High quality
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
@@ -146,125 +87,328 @@ export const generatePDF = async (
       windowHeight: wrapper.offsetHeight,
       onclone: (clonedDoc) => {
         // Additional cleanup in cloned document
-        const clonedElement = clonedDoc.getElementById('pdf-capture-wrapper');
-        if (clonedElement) {
-          const buttons = clonedElement.querySelectorAll('button, [role="button"]');
-          buttons.forEach(btn => {
-            (btn as HTMLElement).style.display = 'none';
-          });
+        const clonedWrapper = clonedDoc.getElementById('pdf-capture-wrapper');
+        if (clonedWrapper) {
+          // Remove no-print elements
+          const noPrintElements = clonedWrapper.querySelectorAll('.no-print');
+          noPrintElements.forEach(el => el.remove());
         }
       }
     });
 
-    // Cleanup hidden wrapper
+    // Cleanup wrapper
     document.body.removeChild(wrapper);
 
-    const imgData = canvas.toDataURL('image/jpeg', quality);
-
-    // 3. Calculate PDF dimensions
-    const pdfWidth = 210;
-    const pdfHeight = 297;
-    const imgWidth = pdfWidth - (marginSide * 2);
-    const pageContentHeight = pdfHeight - (marginTop * 2);
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-      compress: true
+    console.log('✅ [PDF] Canvas captured:', {
+      width: canvas.width,
+      height: canvas.height
     });
 
-    // 4. Improved Multi-page Pagination Logic
-    let heightLeft = imgHeight;
-    let pageIndex = 0;
+    // ============================================
+    // STEP 5: GENERATE PDF WITH PAGINATION
+    // ============================================
+    const pdf = await createPDFFromCanvas(canvas, {
+      quality,
+      marginTop,
+      marginSide
+    });
 
-    while (heightLeft > 0) {
-      const yOffset = marginTop - (pageIndex * pageContentHeight);
-
-      // Protection against nearly blank pages
-      if (pageIndex > 0 && heightLeft < 10) { // Increased threshold from 5 to 10
-        break;
-      }
-
-      if (pageIndex > 0) {
-        pdf.addPage();
-      }
-
-      pdf.addImage(
-        imgData, 
-        'JPEG', 
-        marginSide, 
-        yOffset, 
-        imgWidth, 
-        imgHeight, 
-        undefined, 
-        'FAST'
-      );
-
-      heightLeft -= pageContentHeight;
-      pageIndex++;
-    }
-
-    console.log(`✅ PDF manifested with ${pageIndex} page(s)`);
-
-    // 5. Save the PDF
+    // ============================================
+    // STEP 6: SAVE AND CLEANUP
+    // ============================================
     pdf.save(filename);
+    removeLoadingIndicator(loadingDiv);
+    showNotification('✅ PDF Downloaded Successfully!', 'success');
 
-    // Remove loading indicator
-    const currentLoader = document.getElementById('pdf-loading');
-    if (currentLoader) {
-      document.body.removeChild(currentLoader);
-    }
-
-    // Success notification
-    showNotification('PDF Decree Manifested! ✨', 'success');
+    console.log('✅ [PDF] Generation complete:', filename);
 
   } catch (error) {
-    console.error('❌ PDF generation failed:', error);
-    
-    const currentLoader = document.getElementById('pdf-loading');
-    if (currentLoader) {
-      document.body.removeChild(currentLoader);
-    }
-
-    showNotification('Manifestation failed. Please try again.', 'error');
+    console.error('❌ [PDF] Generation failed:', error);
+    removeLoadingIndicator(document.getElementById('pdf-loading'));
+    showNotification('❌ PDF generation failed. Please try again.', 'error');
     throw error;
   }
 };
 
-/**
- * Show unobtrusive notification
- */
-const showNotification = (message: string, type: 'success' | 'error') => {
-  const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: ${type === 'success' ? '#10b981' : '#ef4444'};
-    color: white;
-    padding: 16px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    z-index: 99999;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    animation: slideIn 0.3s ease-out;
-    pointer-events: none;
-  `;
-  notification.innerHTML = `${type === 'success' ? '✨' : '⚠️'} ${message}`;
-  
-  document.body.appendChild(notification);
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
+/**
+ * Wait for element to exist AND have actual rendered content
+ */
+async function waitForElementWithContent(elementId: string, maxAttempts = 20): Promise<HTMLElement | null> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const element = document.getElementById(elementId);
+    
+    if (element && 
+        element.offsetHeight > 100 && 
+        element.offsetWidth > 100 &&
+        element.children.length > 0) {
+      return element;
+    }
+    
+    console.log(`⏳ [PDF] Waiting for content... attempt ${i + 1}/${maxAttempts}`);
+    await delay(200);
+  }
+  
+  return null;
+}
+
+/**
+ * Wait for all images in element to load
+ */
+async function waitForImages(element: HTMLElement): Promise<void> {
+  const images = Array.from(element.querySelectorAll('img'));
+  const promises = images.map(img => {
+    if (img.complete) return Promise.resolve();
+    return new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve; // Continue even if image fails
+      setTimeout(resolve, 2000); // Timeout after 2s
+    });
+  });
+  await Promise.all(promises);
+}
+
+/**
+ * Create wrapper for PDF capture
+ */
+function createPDFWrapper(): HTMLDivElement {
+  const wrapper = document.createElement('div');
+  wrapper.id = 'pdf-capture-wrapper';
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '-10000px';
+  wrapper.style.top = '0';
+  wrapper.style.width = '210mm'; // A4 width
+  wrapper.style.background = '#ffffff';
+  wrapper.style.padding = '0';
+  wrapper.style.margin = '0';
+  return wrapper;
+}
+
+/**
+ * Normalize clone for consistent PDF rendering
+ */
+function normalizeCloneForPDF(clone: HTMLElement): void {
+  // Reset margins and padding
+  clone.style.margin = '0';
+  clone.style.padding = '0';
+  clone.style.width = '100%';
+  clone.style.boxSizing = 'border-box';
+
+  // Remove no-print elements
+  const noPrintElements = clone.querySelectorAll('.no-print');
+  noPrintElements.forEach(el => el.remove());
+
+  // Fix alignment: Change justify-center to justify-start for PDF
+  const centeredElements = clone.querySelectorAll('.justify-center');
+  centeredElements.forEach(el => {
+    (el as HTMLElement).style.justifyContent = 'flex-start';
+  });
+
+  // Normalize full-height sections
+  const fullHeightSections = clone.querySelectorAll('.min-h-screen, .min-h-\\[297mm\\]');
+  fullHeightSections.forEach(el => {
+    const page = el as HTMLElement;
+    page.style.minHeight = '275mm'; // Slightly less than A4
+    page.style.paddingTop = '15mm';
+    page.style.marginBottom = '0';
+  });
+
+  // Target content wrapper for consistent spacing
+  const contentWrapper = clone.querySelector('.content-wrapper') as HTMLElement;
+  if (contentWrapper) {
+    contentWrapper.style.paddingTop = '10mm';
+    contentWrapper.style.marginTop = '0';
+  }
+
+  // Ensure backgrounds are visible
+  const sections = clone.querySelectorAll('section, div[class*="bg-"]');
+  sections.forEach(el => {
+    const element = el as HTMLElement;
+    const bgColor = window.getComputedStyle(element).backgroundColor;
+    if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)') {
+      element.style.backgroundColor = bgColor;
+    }
+  });
+}
+
+/**
+ * Create PDF from canvas with intelligent pagination
+ */
+async function createPDFFromCanvas(
+  canvas: HTMLCanvasElement,
+  options: { quality: number; marginTop: number; marginSide: number }
+): Promise<jsPDF> {
+  const { quality, marginTop, marginSide } = options;
+  
+  const imgData = canvas.toDataURL('image/jpeg', quality);
+  
+  // A4 dimensions in mm
+  const pdfWidth = 210;
+  const pdfHeight = 297;
+  
+  // Calculate image dimensions
+  const imgWidth = pdfWidth - (marginSide * 2);
+  const pageContentHeight = pdfHeight - (marginTop * 2);
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+    compress: true
+  });
+  
+  let heightLeft = imgHeight;
+  let pageIndex = 0;
+  
+  while (heightLeft > 0) {
+    const yOffset = marginTop - (pageIndex * pageContentHeight);
+    
+    // Skip nearly blank pages
+    if (pageIndex > 0 && heightLeft < 5) {
+      break;
+    }
+    
+    if (pageIndex > 0) {
+      pdf.addPage();
+    }
+    
+    pdf.addImage(imgData, 'JPEG', marginSide, yOffset, imgWidth, imgHeight, undefined, 'FAST');
+    
+    heightLeft -= pageContentHeight;
+    pageIndex++;
+  }
+  
+  console.log(`📄 [PDF] Generated ${pageIndex} pages`);
+  
+  return pdf;
+}
+
+/**
+ * Create loading indicator
+ */
+function createLoadingIndicator(): HTMLDivElement {
+  const loadingDiv = document.createElement('div');
+  loadingDiv.id = 'pdf-loading';
+  loadingDiv.innerHTML = `
+    <div style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(8px);
+    ">
+      <div style="
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        padding: 48px;
+        border-radius: 24px;
+        text-align: center;
+        border: 2px solid #f59e0b;
+        box-shadow: 0 25px 50px -12px rgba(245, 158, 11, 0.3);
+        max-width: 400px;
+      ">
+        <div style="
+          width: 60px;
+          height: 60px;
+          border: 4px solid rgba(245, 158, 11, 0.2);
+          border-top-color: #f59e0b;
+          border-radius: 50%;
+          animation: pdf-spin 0.8s linear infinite;
+          margin: 0 auto 24px;
+        "></div>
+        <h3 style="
+          color: #f59e0b;
+          font-family: 'Cinzel', serif;
+          font-size: 24px;
+          margin: 0 0 12px;
+          font-weight: bold;
+          letter-spacing: 1px;
+        ">Generating PDF</h3>
+        <p style="
+          color: #999;
+          font-family: 'Lora', serif;
+          font-size: 14px;
+          margin: 0 0 8px;
+          line-height: 1.6;
+        ">Capturing report content...</p>
+        <p style="
+          color: #666;
+          font-family: monospace;
+          font-size: 11px;
+          margin: 0;
+        ">Please wait, this may take a moment</p>
+      </div>
+    </div>
+    <style>
+      @keyframes pdf-spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  `;
+  return loadingDiv;
+}
+
+/**
+ * Remove loading indicator
+ */
+function removeLoadingIndicator(element: HTMLElement | null): void {
+  if (element && element.parentNode) {
+    document.body.removeChild(element);
+  }
+}
+
+/**
+ * Show notification
+ */
+function showNotification(message: string, type: 'success' | 'error'): void {
+  const notification = document.createElement('div');
+  notification.innerHTML = `
+    <div style="
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: ${type === 'success' ? '#10b981' : '#ef4444'};
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 10000;
+      animation: slideIn 0.3s ease-out;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      max-width: 350px;
+    ">
+      ${message}
+    </div>
+    <style>
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    </style>
+  `;
+  document.body.appendChild(notification);
+  
   setTimeout(() => {
     if (notification.parentNode) {
-      notification.style.animation = 'slideOut 0.3s ease-out';
-      setTimeout(() => {
-        if (notification.parentNode) {
-          document.body.removeChild(notification);
-        }
-      }, 300);
+      document.body.removeChild(notification);
     }
   }, 4000);
-};
+}
+
+/**
+ * Simple delay utility
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

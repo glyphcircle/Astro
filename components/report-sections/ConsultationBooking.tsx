@@ -1,58 +1,132 @@
 import React from 'react';
-import Card from '../shared/Card';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from '../../context/ThemeContext';
+
+interface ConsultationOption {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  price: number;
+  action: 'book-session' | 'get-kit' | 'send-query';
+}
 
 const ConsultationBooking: React.FC = () => {
-  const options = [
-    { 
-      id: 'session', 
-      icon: '👤', 
-      title: 'One-on-One Session', 
-      desc: 'Live 60-min session with Master Astrologer', 
-      price: '₹2999', 
-      btn: 'Book Session' 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { theme } = useTheme();
+  const isLight = theme.mode === 'light';
+
+  const consultationOptions: ConsultationOption[] = [
+    {
+      id: 'one-on-one',
+      icon: '👤',
+      title: 'ONE-ON-ONE SESSION',
+      description: 'Live 60-min session with Master Astrologer',
+      price: 2999,
+      action: 'book-session',
     },
-    { 
-      id: 'kit', 
-      icon: '📿', 
-      title: 'Remedy Kit', 
-      desc: 'Customized package with yantras & mantras', 
-      price: '₹1499', 
-      btn: 'Get Kit' 
+    {
+      id: 'remedy-kit',
+      icon: '🔥',
+      title: 'REMEDY KIT',
+      description: 'Customized package with yantras & mantras',
+      price: 1499,
+      action: 'get-kit',
     },
-    { 
-      id: 'email', 
-      icon: '✉️', 
-      title: 'Email Query', 
-      desc: 'Ask specific questions with 48h response', 
-      price: '₹499', 
-      btn: 'Send Query' 
-    }
+    {
+      id: 'email-query',
+      icon: '✉️',
+      title: 'EMAIL QUERY',
+      description: 'Ask specific questions with 48h response',
+      price: 499,
+      action: 'send-query',
+    },
   ];
 
-  return (
-    <Card className="p-12 bg-gradient-to-b from-[#2d0a18] to-black border-[#d4af37]/40 text-center relative overflow-hidden shadow-2xl">
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10"></div>
-      <div className="relative z-10">
-        <h2 className="text-4xl font-cinzel font-black gold-gradient-text uppercase mb-2 tracking-tighter">Seek Deeper Guidance</h2>
-        <p className="text-amber-100/60 uppercase tracking-[0.4em] font-bold text-[10px] mb-12">Pathways to Absolute Alignment</p>
+  const handleConsultationClick = (option: ConsultationOption) => {
+    console.log(`🚀 [ConsultationBooking] Initiating ${option.action} workflow`);
+    
+    // Save current location and scroll position to return after booking
+    const returnPath = location.pathname + location.search;
+    const scrollPosition = window.scrollY;
 
-        <div className="pricing-section-container">
-          {options.map(opt => (
-            <div key={opt.id} className="pricing-card-layout bg-white/5 border border-white/10 p-8 rounded-3xl backdrop-blur-xl hover:bg-white/10 transition-all group">
-              <div className="pricing-card-content-area">
-                <div className="text-4xl mb-6 transform group-hover:scale-110 transition-transform">{opt.icon}</div>
-                <h4 className="text-lg font-cinzel font-black text-white uppercase mb-2">{opt.title}</h4>
-                <p className="text-xs text-amber-100/50 mb-6 leading-relaxed flex-grow">{opt.desc}</p>
-                <div className="text-2xl font-mono font-black text-amber-400 mb-6">{opt.price}</div>
-              </div>
-              <div className="pricing-card-button-footer">
-                <button className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg">{opt.btn}</button>
-              </div>
-            </div>
-          ))}
-        </div>
+    // Navigate to consultation booking page with context
+    navigate('/consultation-booking', {
+      state: {
+        consultationType: option.action,
+        optionId: option.id,
+        price: option.price,
+        title: option.title,
+        returnPath,
+        scrollPosition,
+        fromReport: true,
+        serviceType: location.pathname.includes('astrology') ? 'astrology' : 'numerology',
+      },
+    });
+  };
+
+  return (
+    <section
+      className={`w-full max-w-4xl p-8 rounded-2xl border shadow-xl transition-all ${
+        isLight
+          ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
+          : 'bg-gradient-to-br from-gray-900 to-gray-800 border-amber-500/20'
+      }`}
+    >
+      <div className="text-center mb-10">
+        <h2 className={`text-3xl font-cinzel font-black uppercase tracking-widest mb-3 ${isLight ? 'text-amber-900' : 'text-amber-400'}`}>
+          Deepen Your Journey
+        </h2>
+        <p className={`font-lora italic text-lg ${isLight ? 'text-amber-800/70' : 'text-amber-200/60'}`}>
+          Personal guidance from our Master Astrologers
+        </p>
       </div>
-    </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {consultationOptions.map((option) => (
+          <div
+            key={option.id}
+            className={`rounded-2xl p-6 border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl ${
+              isLight
+                ? 'bg-white border-amber-300 hover:border-amber-600'
+                : 'bg-gray-800/50 border-amber-700/30 hover:border-amber-500'
+            }`}
+          >
+            <div className="text-5xl mb-4 text-center">{option.icon}</div>
+            <h3 className={`text-lg font-cinzel font-black uppercase tracking-wider text-center mb-2 leading-tight ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
+              {option.title}
+            </h3>
+            <p className={`text-sm text-center mb-4 font-lora min-h-[3rem] ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
+              {option.description}
+            </p>
+            <div className="text-center mb-6">
+              <span className={`text-3xl font-bold ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
+                ₹{option.price}
+              </span>
+            </div>
+            <button
+              onClick={() => handleConsultationClick(option)}
+              className={`w-full py-3 rounded-full font-cinzel font-bold uppercase tracking-wider text-sm transition-all shadow-lg active:scale-95 ${
+                isLight
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white'
+                  : 'bg-gradient-to-r from-amber-700 to-orange-800 hover:from-amber-600 hover:to-orange-700 text-white'
+              }`}
+            >
+              {option.action === 'book-session' && 'BOOK SESSION'}
+              {option.action === 'get-kit' && 'GET KIT'}
+              {option.action === 'send-query' && 'SEND QUERY'}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className={`p-4 rounded-xl text-center text-sm ${isLight ? 'bg-amber-100/50 text-amber-900' : 'bg-amber-900/20 text-amber-200'}`}>
+        <p className="font-semibold">
+          ✨ All consultations include personalized remedies and lifetime report access
+        </p>
+      </div>
+    </section>
   );
 };
 

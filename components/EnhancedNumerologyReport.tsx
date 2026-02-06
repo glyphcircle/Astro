@@ -4,7 +4,6 @@ import { useDb } from '../hooks/useDb';
 import { Link, useLocation } from 'react-router-dom';
 import GemstoneRecommendation from './report-sections/GemstoneRecommendation';
 import RemedySection from './report-sections/RemedySection';
-import ConsultationBooking from './report-sections/ConsultationBooking';
 import Button from './shared/Button';
 
 interface EnhancedNumerologyReportProps {
@@ -79,7 +78,7 @@ const EnhancedNumerologyReport: React.FC<EnhancedNumerologyReportProps> = ({
 
   return (
     <div 
-      id="numerology-report-content" // 🔑 Standardized ID
+      id="numerology-report-content"
       className="report-container min-h-screen w-full flex flex-col items-center justify-start pt-16 pb-24 px-4 sm:px-8 bg-[#FFF7ED]"
       style={{
         backgroundImage: `url(${template?.template_image_url})`,
@@ -149,7 +148,6 @@ const EnhancedNumerologyReport: React.FC<EnhancedNumerologyReportProps> = ({
            <div className="mt-8 flex justify-center gap-6">
               <Link to="/store?category=Gemstones" state={{ from: 'numerology-report', preserveReport: true, serviceType: 'numerology' }} className="text-amber-500 underline text-sm font-bold uppercase tracking-widest">Visit Sacred Store</Link>
            </div>
-           <ConsultationBooking />
         </div>
       </div>
       

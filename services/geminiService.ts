@@ -68,7 +68,6 @@ async function decodePcmToAudioBuffer(
   sampleRate: number = 24000,
   numChannels: number = 1,
 ): Promise<AudioBuffer> {
-  // Convert Uint8 (Bytes) to Int16 (PCM)
   const dataInt16 = new Int16Array(data.buffer);
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
@@ -81,6 +80,79 @@ async function decodePcmToAudioBuffer(
   }
   return buffer;
 }
+
+export const processConsultationBooking = async (bookingData: any): Promise<any> => {
+  const ai = getAi();
+  const systemInstruction = `You are a Master Vedic Astrologer AI assistant for DAKSHINA - an ancient wisdom consultation platform. 
+  Your role is to handle consultation requests, provide preliminary guidance, and manage the booking workflow.
+  
+  TASK:
+  1. Confirm payment receipt.
+  2. Acknowledge user's consultation type and report context.
+  3. Provide 2-3 specific preliminary insights based on their service type (astrology, numerology, etc.).
+  4. Suggest at least 3 actionable remedies (mantra, gemstone, etc.) connected to their context.
+  5. Set a clear agenda for their consultation or delivery.
+  
+  Tone: Mystical yet Professional, Empathetic, Reassuring. Use Sanskrit terms like Rahu, Ketu, Nakshatra.
+  
+  Mental Invocation: "Om Gam Ganapataye Namah" - guide me to serve this soul's highest good.`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Process this booking request and generate the confirmation response:
+    ${JSON.stringify(bookingData, null, 2)}`,
+    config: {
+      systemInstruction,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          confirmationId: { type: Type.STRING },
+          emailSubject: { type: Type.STRING },
+          emailBody: { type: Type.STRING },
+          smsNotification: { type: Type.STRING },
+          preliminaryInsights: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                category: { type: Type.STRING },
+                observation: { type: Type.STRING },
+                recommendation: { type: Type.STRING }
+              }
+            }
+          },
+          suggestedRemedies: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                type: { type: Type.STRING },
+                item: { type: Type.STRING },
+                timing: { type: Type.STRING },
+                duration: { type: Type.STRING },
+                reason: { type: Type.STRING }
+              }
+            }
+          },
+          consultationAgenda: { type: Type.ARRAY, items: { type: Type.STRING } },
+          nextSteps: {
+            type: Type.OBJECT,
+            properties: {
+              timeline: { type: Type.STRING },
+              contactMethod: { type: Type.STRING },
+              preparation: { type: Type.STRING }
+            }
+          },
+          internalNotes: { type: Type.STRING }
+        },
+        required: ["confirmationId", "emailSubject", "emailBody", "preliminaryInsights", "nextSteps"]
+      }
+    }
+  });
+
+  return JSON.parse(response.text || "{}");
+};
 
 export const getGemstoneGuidance = async (name: string, dob: string, intent: string, language: string = 'English'): Promise<any> => {
   const ai = getAi();
@@ -121,7 +193,6 @@ export const generateMantraAudio = async (text: string, voiceName: 'Charon' | 'K
     },
   });
 
-  // 🔍 ROBUST EXTRACTION: Loop candidates and parts to find audio data
   let base64Audio: string | undefined;
   if (response.candidates && response.candidates.length > 0) {
       for (const part of response.candidates[0].content.parts) {

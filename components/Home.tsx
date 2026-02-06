@@ -102,23 +102,22 @@ const Home: React.FC = () => {
 
                 return (
                     <Link to={targetPath} key={service.id} className="group relative block h-full z-20">
-                    <div className="imperial-card h-full rounded-[2.5rem] p-10 text-center flex flex-col items-center relative overflow-hidden transition-all duration-500">
+                    <div className="imperial-card h-full rounded-[2.5rem] p-10 text-center flex flex-col items-center relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
 
                         {service.resolvedImageUrl && (
                             <div className="absolute inset-0 z-0 overflow-hidden">        
                                 <img
                                     src={service.resolvedImageUrl}
                                     alt={service.name}
-                                    className="w-full h-full object-cover opacity-40 transition-all duration-700 transform scale-100 group-hover:opacity-[var(--hover-opacity)]"
+                                    className="w-full h-full object-cover opacity-30 transition-all duration-700 transform scale-100 group-hover:scale-110 group-hover:opacity-[var(--hover-opacity)] group-hover:brightness-110"
                                 />
                                 {/* Gradient mask that completely disappears on hover to show the sharp image */}
-                                <div className="absolute inset-0 bg-gradient-to-b from-skin-base via-transparent to-skin-base opacity-40 group-hover:opacity-0 transition-opacity duration-700"></div>
+                                <div className="absolute inset-0 bg-gradient-to-b from-skin-base via-transparent to-skin-base opacity-40 group-hover:opacity-10 transition-opacity duration-700"></div>
                             </div>
                         )}
 
-                        <div className="relative z-10 mb-8 w-28 h-28 rounded-full sacred-circle-icon flex items-center justify-center transform group-hover:scale-110 transition-all duration-700 shadow-xl">
+                        <div className="relative z-10 mb-8 w-28 h-28 rounded-full sacred-circle-icon flex items-center justify-center transform group-hover:scale-110 transition-all duration-700 shadow-xl group-hover:shadow-[0_0_25px_rgba(245,158,11,0.4)]">
                              <div className="text-white drop-shadow-lg">{service.icon}</div>
-                             <div className="absolute -top-2 -right-2 text-3xl font-cinzel text-white opacity-40 group-hover:opacity-100 transition-opacity"></div>
                         </div>
 
                         <div className="relative z-10 flex flex-col items-center h-full w-full">
@@ -131,10 +130,10 @@ const Home: React.FC = () => {
                             </p>
 
                             <div className="mt-auto w-full pt-8 border-t border-skin-border/20 flex flex-col items-center gap-4">
-                                <div className="text-skin-accent font-mono font-black text-xl tracking-tighter">
+                                <div className="text-skin-accent font-mono font-black text-xl tracking-tighter group-hover:scale-110 transition-transform">
                                     {service.price > 0 ? `₹${service.price}` : 'FREE'}    
                                 </div>
-                                <div className={`w-full py-3 rounded-full border transition-all ${isImplemented ? 'bg-amber-600 border-amber-400 text-white shadow-lg' : 'bg-skin-surface border-skin-border/40 group-hover:border-skin-accent'}`}>
+                                <div className={`w-full py-3 rounded-full border transition-all ${isImplemented ? 'bg-amber-600 border-amber-400 text-white shadow-lg group-hover:bg-amber-500 group-hover:shadow-[0_5px_15px_rgba(245,158,11,0.3)]' : 'bg-skin-surface border-skin-border/40 group-hover:border-skin-accent'}`}>
                                     <span className="text-[10px] font-black uppercase tracking-[0.4em]">
                                         {isImplemented ? 'Manifest Portal' : 'Under Observation'}
                                     </span>

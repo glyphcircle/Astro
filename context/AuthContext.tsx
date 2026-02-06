@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 import { dbService, User, Reading } from '../services/db';
@@ -26,7 +25,18 @@ interface AuthContextType {
   logout: () => void;
   refreshUser: () => void;
   saveReading: (reading: PendingReading) => void;
-  register: any; sendMagicLink: any; toggleFavorite: any; pendingReading: any; setPendingReading: any; commitPendingReading: any; awardKarma: any; newSigilUnlocked: any; clearSigilNotification: any;
+  register: (name: string, email: string, pass: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithPhone: (phone: string) => Promise<void>;
+  verifyOtp: (phone: string, token: string) => Promise<void>;
+  sendMagicLink: any;
+  toggleFavorite: any;
+  pendingReading: any;
+  setPendingReading: any;
+  commitPendingReading: any;
+  awardKarma: any;
+  newSigilUnlocked: any;
+  clearSigilNotification: any;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -174,6 +184,64 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const register = async (name: string, email: string, pass: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: {
+          data: { full_name: name, credits: 0 }
+        }
+      });
+      if (error) throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signInWithPhone = async (phone: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone
+      });
+      if (error) throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyOtp = async (phone: string, token: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        phone,
+        token,
+        type: 'sms'
+      });
+      if (error) throw error;
+      await refreshUser();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     localStorage.removeItem('glyph_admin_session');
     setUser(null);
@@ -203,8 +271,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <AuthContext.Provider value={{
       user, isAuthenticated: !!user, isAdminVerified, isAdminLoading, credits: user?.credits || 0, isLoading, error, history,
-      login, logout, refreshUser, saveReading,
-      register: null, sendMagicLink: null, toggleFavorite: null, pendingReading: null,
+      login, logout, refreshUser, saveReading, register, signInWithGoogle, signInWithPhone, verifyOtp,
+      sendMagicLink: null, toggleFavorite: null, pendingReading: null,
       setPendingReading: null, commitPendingReading: null, awardKarma: () => {},
       newSigilUnlocked: null, clearSigilNotification: () => {}
     }}>

@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { useTranslation } from '../hooks/useTranslation';
 import OptimizedImage from './shared/OptimizedImage';
@@ -152,7 +151,7 @@ const TarotCard: React.FC<TarotCardProps> = ({ card, isSelected, onClick }) => {
         aspect-[2/3] 
         perspective-1000 z-10 
         transition-all duration-500 ease-out will-change-transform
-        ${isSelected ? 'scale-100 z-40' : 'hover:-translate-y-2 hover:z-30 hover:scale-105'}
+        ${isSelected ? 'scale-100 z-40' : 'hover:-translate-y-4 hover:z-30 hover:scale-110 active:scale-95'}
       `}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
@@ -161,7 +160,7 @@ const TarotCard: React.FC<TarotCardProps> = ({ card, isSelected, onClick }) => {
         className={`
           relative w-full h-full rounded-xl transition-all duration-700 transform-style-3d shadow-2xl
           ${isSelected ? 'rotate-y-180' : ''}
-          ${!isSelected ? 'group-hover:shadow-[0_0_30px_rgba(245,158,11,0.4)]' : ''}
+          ${!isSelected ? 'group-hover:shadow-[0_15px_35px_rgba(245,158,11,0.5)] group-hover:ring-2 group-hover:ring-amber-500/50' : ''}
         `}
       >
         
@@ -174,21 +173,21 @@ const TarotCard: React.FC<TarotCardProps> = ({ card, isSelected, onClick }) => {
                      border border-amber-600/30 bg-[#0a0a1a] overflow-hidden"
         >
             {/* Sacred Geometry Pattern */}
-            <div className="absolute inset-0 opacity-30" style={SACRED_GEOMETRY_STYLE}></div>
+            <div className="absolute inset-0 opacity-30 transition-opacity duration-500 group-hover:opacity-50" style={SACRED_GEOMETRY_STYLE}></div>
             
             {/* Paper Texture Overlay */}
             <div className="absolute inset-0 z-10" style={TEXTURE_STYLE}></div>
 
             {/* Center Eye Emblem */}
             <div className="absolute inset-0 flex items-center justify-center z-20">
-                <div className="w-1/3 aspect-square rounded-full border border-amber-500/30 flex items-center justify-center relative bg-black/60 backdrop-blur-sm shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                <div className="w-1/3 aspect-square rounded-full border border-amber-500/30 flex items-center justify-center relative bg-black/60 backdrop-blur-sm shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-all duration-500 group-hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] group-hover:scale-110">
                      <div className="absolute inset-0 border border-amber-500/20 rounded-full animate-ping opacity-20"></div>
-                     <span className="text-[150%] filter drop-shadow-[0_0_5px_rgba(245,158,11,0.8)] opacity-90">👁️</span>
+                     <span className="text-[150%] filter drop-shadow-[0_0_5px_rgba(245,158,11,0.8)] opacity-90 transition-transform duration-500 group-hover:rotate-12">👁️</span>
                 </div>
             </div>
 
             {/* Inner Border */}
-            <div className="absolute inset-1 border border-amber-500/20 rounded-lg pointer-events-none"></div>
+            <div className="absolute inset-1 border border-amber-500/20 rounded-lg pointer-events-none transition-colors duration-500 group-hover:border-amber-500/40"></div>
         </div>
 
 
