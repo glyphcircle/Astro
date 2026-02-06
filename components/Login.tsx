@@ -24,8 +24,12 @@ const Login: React.FC = () => {
   useEffect(() => {
     const fetchSecret = async () => {
         try {
+            // Attempt to fetch the admin portal trapdoor secret from the configuration table
             const secret = await dbService.getConfigValue('admin_portal_secret');
-            if (secret) setCachedSecret(secret);
+            if (secret) {
+                console.log("🗝️ Sanctuary Trapdoor logic initialized.");
+                setCachedSecret(secret);
+            }
         } catch (e) {
             console.debug("Trapdoor pre-fetch skipped (offline/unconfigured)");
         }
@@ -35,8 +39,10 @@ const Login: React.FC = () => {
 
   const handleEmailChange = (val: string) => {
     setEmail(val);
+    // Secret Trapdoor Activation
     if (cachedSecret && val.trim() === cachedSecret) {
-        if (navigator.vibrate) navigator.vibrate([30, 30]);
+        if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
+        console.info("⚡ Sovereign bypass sequence detected.");
         navigate('/master-login');
     }
   };
@@ -47,6 +53,7 @@ const Login: React.FC = () => {
     setLocalError(null);
 
     try {
+      // Check password for secret as well for safety
       if (cachedSecret && (email.trim() === cachedSecret || password.trim() === cachedSecret)) {
           navigate('/master-login');
           return;

@@ -1,10 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
 // @ts-ignore
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import Card from './shared/Card';
 import AdminContextHelp from './AdminContextHelp';
+import { useAuth } from '../context/AuthContext';
 
 const SystemStatus: React.FC = () => {
     const [stats, setStats] = useState({
@@ -81,9 +81,10 @@ const SystemStatus: React.FC = () => {
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user, isAdminVerified, logout } = useAuth();
   
-  // FIXED: Lazy initialization to prevent initial null render (Black Screen issue)
-  const [user, setUser] = useState<any>(() => {
+  // Recognition of "Master" session via localStorage OR standard Supabase verified session
+  const [adminUser, setAdminUser] = useState<any>(() => {
       try {
           const session = localStorage.getItem('glyph_admin_session');
           return session ? JSON.parse(session) : null;
@@ -93,22 +94,19 @@ const AdminDashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!user) {
-        const session = localStorage.getItem('glyph_admin_session');
-        if (!session) {
-            navigate('/master-login');
-        } else {
-            setUser(JSON.parse(session));
-        }
+    // If not verified as admin, redirect to normal login
+    if (!isAdminVerified && !adminUser) {
+        navigate('/login');
     }
-  }, [navigate, user]);
+  }, [navigate, isAdminVerified, adminUser]);
 
   const handleLogout = () => {
       localStorage.removeItem('glyph_admin_session');
-      navigate('/master-login');
+      logout();
+      navigate('/login');
   };
 
-  if (!user) {
+  if (!isAdminVerified && !adminUser) {
       return (
         <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center font-sans p-4">
             <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -125,7 +123,7 @@ const AdminDashboard: React.FC = () => {
         <div className="text-center mb-8">
             <h1 className="text-3xl font-cinzel font-bold text-white mb-2 tracking-widest">Admin Sanctum</h1>
             <p className="text-green-400 text-sm font-mono tracking-widest uppercase">
-                IDENTIFIED: {user.user}
+                IDENTIFIED: {adminUser?.user || user?.email || 'Authorized Entity'}
             </p>
         </div>
 

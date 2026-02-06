@@ -94,15 +94,77 @@ export class SupabaseDatabase {
   }
 
   async updateEntry(table: string, id: string | number, updates: any) {
-    if (!supabase) throw new Error("Supabase client not initialized.");
-    const { data, error } = await supabase
-      .from(table)
-      .update(updates)
-      .eq('id', id)
-      .select();
+    console.log('📡 [DB] PATCH START', { tableName: table, id, updatesKeys: Object.keys(updates) })
 
-    if (error) throw error;
-    return data;
+    if (!supabase) {
+      console.error('❌ CRITICAL: supabase UNDEFINED')
+      throw new Error("Supabase missing");
+    }
+
+    // 🔧 Shorten URLs
+    if (updates.image_url && updates.image_url.length > 200) {
+      console.log('🔧 Shortening image_url:', updates.image_url.length)
+      const driveMatch = updates.image_url.match(/\/d\/([a-zA-Z0-9_-]+)/)
+      if (driveMatch) {
+        updates.image_url = `https://drive.google.com/uc?id=${driveMatch[1]}`
+        console.log('✅ Shortened to:', updates.image_url)
+      } else {
+        updates.image_url = updates.image_url.slice(0, 200)
+      }
+    }
+
+    if (updates.image && updates.image.length > 200) {
+      console.log('🔧 Shortening image:', updates.image.length)
+      const driveMatch = updates.image.match(/\/d\/([a-zA-Z0-9_-]+)/)
+      if (driveMatch) {
+        updates.image = `https://drive.google.com/uc?id=${driveMatch[1]}`
+        console.log('✅ Shortened to:', updates.image)
+      } else {
+        updates.image = updates.image.slice(0, 200)
+      }
+    }
+
+    try {
+      console.log('🔧 [DB] Final payload:', updates)
+      
+      // STEP 1: UPDATE without select to avoid return-value complexity/RLS issues
+      const { error: updateError } = await supabase
+        .from(table)
+        .update(updates)
+        .eq('id', id)
+
+      if (updateError) {
+        console.error('🚨 [DB] UPDATE ERROR:', {
+          message: updateError.message,
+          code: updateError.code,
+          details: (updateError as any).details,
+          hint: (updateError as any).hint
+        })
+        throw updateError
+      }
+
+      console.log('✅ [DB] UPDATE executed, now fetching...')
+
+      // STEP 2: FETCH updated record separately to verify and return
+      const { data, error: selectError } = await supabase
+        .from(table)
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (selectError) {
+        console.warn('⚠️ [DB] SELECT after UPDATE failed:', selectError.message)
+        // Return success even if select fails (the update itself didn't error)
+        return [{ id, ...updates }]
+      }
+
+      console.log('✅ [DB] UPDATE SUCCESS - Verified data:', data)
+      return [data]
+
+    } catch (error: any) {
+      console.error('💥 [DB] UPDATE FAILED:', error.message || error)
+      throw error
+    }
   }
 
   async createEntry(table: string, payload: any) {

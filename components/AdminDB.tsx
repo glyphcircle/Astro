@@ -20,7 +20,8 @@ const AdminDB: React.FC = () => {
     const tableName = table || 'services';
     const data = db[tableName] || [];
 
-    const SYSTEM_FIELDS = ['id', 'created_at', 'updated_at', 'timestamp', 'item_ids', 'user_id'];
+    // 🔒 READ-ONLY FIELDS (never editable)
+    const SYSTEM_FIELDS = ['id', 'created_at', 'updated_at'];
 
     useEffect(() => {
         console.log('📂 [AdminDB] Syncing Registry:', tableName);
@@ -32,7 +33,7 @@ const AdminDB: React.FC = () => {
             return ['name', 'price', 'description', 'path', 'image', 'status'];
         }
         let rawHeaders = data.length > 0 ? Object.keys(data[0]).filter(h => h !== 'id' && h !== 'status') : [];
-        return rawHeaders.filter(h => !['user_id', 'created_at', 'updated_at', 'timestamp', 'id'].includes(h));
+        return rawHeaders.filter(h => !SYSTEM_FIELDS.includes(h));
     }, [data, tableName]);
 
     const openCreateModal = () => {
@@ -42,7 +43,7 @@ const AdminDB: React.FC = () => {
             : data.length > 0 ? Object.keys(data[0]) : ['id', 'name'];
 
         formFields.forEach(header => {
-            if (!['created_at', 'updated_at', 'timestamp', 'user_id'].includes(header)) {
+            if (!SYSTEM_FIELDS.includes(header)) {
                 if (header === 'price' || header === 'stock') {
                     initialForm[header] = 0;
                 } else if (header === 'status') {
@@ -61,6 +62,8 @@ const AdminDB: React.FC = () => {
     };
 
     const openEditModal = (record: any) => {
+        console.log(`🛠️ [UI] Inspecting artifact: ${record.id}`)
+        // Copy ALL fields (don't filter yet)
         setFormData({ ...record });
         setIsNewRecord(false);
         setStatus('idle');
@@ -80,71 +83,58 @@ const AdminDB: React.FC = () => {
     };
 
     const handleCommit = async () => {
-    console.log('🔵 [UI] handleCommit START');
-    setStatus('saving');
-    setErrorMsg(null);
-    const recordId = formData.id;
-
-    const payload = { ...formData };
-    
-    // 🆕 ADD THIS: Convert Google Drive URLs to AWS S3 BEFORE saving
-    if (tableName === 'report_formats') {
-        console.log('🔄 [UI] Converting Drive URLs...');
+        console.log('📡 [UI] Initiating Cloud Synchronization...');
+        setStatus('saving');
+        setErrorMsg(null);
         
-        // Convert template_image_url
-        if (payload.template_image_url && payload.template_image_url.includes('drive.google.com')) {
-            console.log('📸 Original template_image_url:', payload.template_image_url);
-            payload.template_image_url = toDriveEmbedUrl(payload.template_image_url);
-            console.log('✅ Converted template_image_url:', payload.template_image_url);
-        }
+        const recordId = formData.id;
+        const payload = { ...formData };
         
-        // Convert thumbnail_url
-        if (payload.thumbnail_url && payload.thumbnail_url.includes('drive.google.com')) {
-            console.log('📸 Original thumbnail_url:', payload.thumbnail_url);
-            payload.thumbnail_url = toDriveEmbedUrl(payload.thumbnail_url);
-            console.log('✅ Converted thumbnail_url:', payload.thumbnail_url);
+        // ONLY remove system fields
+        SYSTEM_FIELDS.forEach(field => delete payload[field]);
+        
+        console.log('💾 [UI] Payload before submit:', payload);
+
+        try {
+            let result;
+            if (isNewRecord) {
+                console.log('🆕 [UI] Creating new entry...');
+                result = await createEntry(tableName, payload);
+                console.log('✅ [UI] Create successful!', result);
+            } else {
+                if (!recordId) throw new Error('IDENTIFICATION_ERROR: Cannot modify artifact without valid id.');
+                console.log(`📡 [UI] Update for ID: ${recordId}`)
+                result = await updateEntry(tableName, recordId, payload);
+                console.log('✅ [UI] Update result:', result);
+                
+                // VERIFY update actually happened - check for empty array return
+                // result might be an object or an array depending on implementation, 
+                // robust check covers both.
+                if (!result || (Array.isArray(result) && result.length === 0)) {
+                    throw new Error('UPDATE_ABORTED: Server returned empty record set. Verify RLS policies or permissions.');
+                }
+            }
+
+            setStatus('success');
+            
+            // Wait longer before closing to allow user to see success
+            setTimeout(() => {
+                setIsModalOpen(false);
+                setStatus('idle');
+                refreshTable(tableName);
+            }, 1500);
+
+        } catch (err: any) {
+            console.error('💥 [UI] Commit failed:', err);
+            setStatus('error');
+            setErrorMsg(err.message || 'Celestial Link Failed: Update rejected by server.');
+
+            setTimeout(() => {
+                setStatus('idle');
+                setErrorMsg(null);
+            }, 5000);
         }
-    }
-    
-    SYSTEM_FIELDS.forEach(field => delete (payload as any)[field]);
-    console.log('💾 [UI] Payload before submit:', payload);
-
-    try {
-        if (isNewRecord) {
-            console.log('🆕 [UI] Creating new entry...');
-            await createEntry(tableName, payload);
-            console.log('✅ [UI] Create successful!');
-        } else {
-            if (!recordId) throw new Error('IDENTIFICATION ERROR: Missing ID.');
-            console.log('📝 [UI] Updating entry...');
-            await updateEntry(tableName, recordId, payload);
-            console.log('✅ [UI] Update successful!');
-        }
-
-        // ✅ Wait for refresh to complete BEFORE closing modal
-        console.log('🔄 [UI] Refreshing table data...');
-        await refreshTable(tableName);
-        console.log('✅ [UI] Table refreshed with new data');
-
-        // Now close modal with fresh data
-        console.log('🚪 [UI] Closing modal');
-        setIsModalOpen(false);
-        setStatus('idle');
-        console.log('✅ [UI] Modal closed, button unlocked');
-
-    } catch (err: any) {
-        console.error('💥 [UI] Commit failed:', err);
-        setStatus('error');
-        setErrorMsg(err.message || 'Registry rejected the payload.');
-
-        setTimeout(() => {
-            console.log('🔄 [UI] Auto-clearing error state');
-            setStatus('idle');
-            setErrorMsg(null);
-        }, 3000);
-    }
-};
-
+    };
 
     return (
         <div className="min-h-screen bg-[#020205] pt-32 p-4 md:p-8 md:pt-40 font-mono text-gray-300">
@@ -277,7 +267,7 @@ const AdminDB: React.FC = () => {
 
                     <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-4 custom-scrollbar">
                         {Object.keys(formData)
-                            .filter(k => !['created_at', 'updated_at', 'timestamp', 'user_id'].includes(k))
+                            .filter(k => !SYSTEM_FIELDS.includes(k))
                             .map(key => (
                                 <div key={key} className="space-y-2">
                                     <label className="block text-[10px] text-gray-500 uppercase font-black ml-1 tracking-[0.2em]">{key}</label>
@@ -299,16 +289,27 @@ const AdminDB: React.FC = () => {
                                         />
                                     ) : (
                                         <input
-                                            className={`w-full bg-black border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-amber-500 font-mono ${key === 'id' && !isNewRecord ? 'opacity-50 cursor-not-allowed' : ''
-                                                }`}
+                                            className="w-full bg-black border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-amber-500 font-mono"
                                             value={formData[key] ?? ''}
                                             onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
                                             placeholder={`Enter ${key}...`}
-                                            disabled={key === 'id' && !isNewRecord}
+                                            type={key.includes('price') || key.includes('stock') ? 'number' : 'text'}
                                         />
                                     )}
                                 </div>
                             ))}
+                            
+                        {/* 🔒 Primary Key Read Only Section */}
+                        {!isNewRecord && formData.id && (
+                          <div className="pt-4 border-t border-white/5 opacity-40">
+                            <label className="block text-[9px] text-gray-500 uppercase font-black ml-1 tracking-[0.2em]">
+                              Primary Identifier (Read Only)
+                            </label>
+                            <div className="w-full bg-black/40 border border-white/5 rounded-xl p-4 text-gray-400 text-xs font-mono cursor-not-allowed">
+                              {formData.id}
+                            </div>
+                          </div>
+                        )}
                     </div>
 
                     {errorMsg && (
