@@ -15,17 +15,13 @@ interface State {
 /**
  * Standard React Error Boundary component.
  */
-/* Fix: Explicitly extending Component from named imports ensures property visibility of setState and props in strict environments */
+// Fix: Directly extending Component ensures proper type resolution for setState, props and state in certain TypeScript environments
 class ErrorBoundary extends Component<Props, State> {
-  /* Fix: Explicitly initialized state with State interface */
+  /* Explicitly initialized state with State interface for better type inference */
   public state: State = {
     hasError: false,
     error: null,
   };
-
-  constructor(props: Props) {
-    super(props);
-  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
@@ -35,7 +31,7 @@ class ErrorBoundary extends Component<Props, State> {
     console.error("🌌 Cosmic Interruption Caught:", error, errorInfo);
   }
 
-  /* Fix: Correctly binding handleRetry while accessing inherited setState member */
+  // Fix: setState is an inherited member of the Component base class
   public handleRetry = () => {
     this.setState({ hasError: false, error: null });
     window.location.reload(); 
@@ -49,7 +45,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public render(): ReactNode {
-    /* Fix: Accessing inherited state and props members from Component base class */
+    // Fix: Accessing state and props inherited from the Component base class
     const { hasError, error } = this.state;
     const { children } = this.props;
 

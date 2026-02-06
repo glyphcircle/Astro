@@ -1,4 +1,5 @@
 import React, { createContext, useState, useCallback, useEffect } from 'react';
+import { formatCurrency } from '../utils/currency';
 
 // Import Locale Objects directly using relative paths
 import en from '../locales/en';
@@ -60,11 +61,6 @@ const FALLBACK_RATES: Record<string, number> = {
     'CNY': 0.085
 };
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-    'INR': '₹', 'USD': '$', 'EUR': '€', 'SAR': 'ر.स', 
-    'BRL': 'R$', 'RUB': '₽', 'JPY': '¥', 'CNY': '¥'
-};
-
 export const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -91,7 +87,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (tz === 'Asia/Dubai') return 'SAR';
           if (tz === 'Asia/Tokyo') return 'JPY';
       } catch {}
-      return 'USD';
+      return 'INR'; // Default changed from USD to INR as requested
   });
 
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>(FALLBACK_RATES);
@@ -149,13 +145,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         else price = Math.round(converted); 
     }
 
-    const symbol = CURRENCY_SYMBOLS[currency] || '$';
+    const locale = currency === 'INR' ? 'en-IN' : 'en-US';
+    const display = formatCurrency(price, currency, locale);
 
     return {
         price,
-        symbol,
+        symbol: '', // Symbols handled by display string now
         currency,
-        display: currency === 'SAR' ? `${price} ${symbol}` : `${symbol}${price}`
+        display
     };
   }, [currency, exchangeRates]);
 

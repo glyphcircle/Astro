@@ -4,11 +4,13 @@ import { useDb } from '../hooks/useDb';
 import Card from './shared/Card';
 import Modal from './shared/Modal';
 import { toDriveEmbedUrl } from '../drive';
+import { useTranslation } from '../hooks/useTranslation';
 
 const AdminDB: React.FC = () => {
     const { table } = useParams<{ table: string }>();
     const { db, refreshTable, updateEntry, createEntry, deleteEntry, toggleStatus } = useDb();
     const navigate = useNavigate();
+    const { getRegionalPrice } = useTranslation();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -107,9 +109,6 @@ const AdminDB: React.FC = () => {
                 result = await updateEntry(tableName, recordId, payload);
                 console.log('✅ [UI] Update result:', result);
                 
-                // VERIFY update actually happened - check for empty array return
-                // result might be an object or an array depending on implementation, 
-                // robust check covers both.
                 if (!result || (Array.isArray(result) && result.length === 0)) {
                     throw new Error('UPDATE_ABORTED: Server returned empty record set. Verify RLS policies or permissions.');
                 }
@@ -117,7 +116,6 @@ const AdminDB: React.FC = () => {
 
             setStatus('success');
             
-            // Wait longer before closing to allow user to see success
             setTimeout(() => {
                 setIsModalOpen(false);
                 setStatus('idle');
@@ -195,6 +193,7 @@ const AdminDB: React.FC = () => {
                                                 const val = row[h];
                                                 const isImageField = ['image', 'image_url', 'logo_url'].includes(h);
                                                 const isStatusField = h === 'status';
+                                                const isPriceField = h.toLowerCase().includes('price') || h.toLowerCase().includes('amount');
 
                                                 return (
                                                     <td key={h} className="p-6 text-[12px] truncate max-w-[200px] font-mono font-medium text-gray-400">
@@ -217,6 +216,8 @@ const AdminDB: React.FC = () => {
                                                             >
                                                                 {val}
                                                             </button>
+                                                        ) : isPriceField && typeof val === 'number' ? (
+                                                            <span className="text-amber-500 font-bold">{getRegionalPrice(val).display}</span>
                                                         ) : (
                                                             String(val ?? '-')
                                                         )}
@@ -251,7 +252,6 @@ const AdminDB: React.FC = () => {
             <Modal
                 isVisible={isModalOpen}
                 onClose={() => {
-                    console.log('🚪 [UI] Modal onClose triggered, resetting all states');
                     setIsModalOpen(false);
                     setStatus('idle');
                     setErrorMsg(null);
@@ -299,7 +299,6 @@ const AdminDB: React.FC = () => {
                                 </div>
                             ))}
                             
-                        {/* 🔒 Primary Key Read Only Section */}
                         {!isNewRecord && formData.id && (
                           <div className="pt-4 border-t border-white/5 opacity-40">
                             <label className="block text-[9px] text-gray-500 uppercase font-black ml-1 tracking-[0.2em]">

@@ -9,7 +9,7 @@ import { generatePDF } from '../utils/pdfGenerator';
 
 const ReadingHistory: React.FC = () => {
   const { history, toggleFavorite, isLoading } = useAuth();
-  const { t } = useTranslation();
+  const { t, getRegionalPrice } = useTranslation();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'favorites'>('all');
   const [selectedReading, setSelectedReading] = useState<any>(null);
@@ -166,6 +166,12 @@ const ReadingHistory: React.FC = () => {
                   <div className="text-amber-100/70 font-lora italic border-l-2 border-amber-500/20 pl-4 mb-6 line-clamp-3 text-sm flex-grow">
                     "{reading.content}"
                   </div>
+
+                  {reading.payment_amount && (
+                    <div className="mb-4 text-[10px] font-black uppercase tracking-widest text-amber-500/80">
+                      Amount: {getRegionalPrice(reading.payment_amount).display}
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <button 

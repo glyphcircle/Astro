@@ -9,6 +9,13 @@ export interface User {
   currency: string;
   status: 'active' | 'inactive';
   created_at: string;
+  // Stats from v_user_dashboard_summary
+  total_spent?: number;
+  transaction_count?: number;
+  readings_count?: number;
+  paid_readings_count?: number;
+  theme?: string;
+  theme_settings?: any;
   gamification?: {
     karma: number;
     streak: number;
@@ -18,7 +25,7 @@ export interface User {
 }
 
 export interface Reading {
-  id: string;
+  id: string; // Maps from reading_id in v_user_readings_history
   user_id: string;
   type: 'tarot' | 'palmistry' | 'astrology' | 'numerology' | 'face-reading' | 'remedy' | 'matchmaking' | 'dream-analysis';
   title: string;
@@ -26,10 +33,33 @@ export interface Reading {
   content: string;
   image_url?: string;
   is_favorite?: boolean;
-  timestamp: string;
+  timestamp: string; // Maps from reading_date in v_user_readings_history
   created_at: string;
   meta_data?: any;
   is_paid?: boolean;
+  // Payment details from history view
+  payment_amount?: number;
+  payment_currency?: string;
+  payment_status?: string;
+}
+
+export interface StoreItemWithStock {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  image_url: string;
+  status: string;
+  sku: string;
+  system_stock: number;
+  reserved_stock: number;
+  available_stock: number;
+  stock_status: 'in_stock' | 'low_stock' | 'out_of_stock';
+  low_stock_threshold: number;
+  allow_backorder: boolean;
+  total_stock_in: number;
+  total_stock_out: number;
 }
 
 export interface ReportTemplate {
@@ -44,6 +74,7 @@ export interface ReportTemplate {
   is_default: boolean;
   is_premium: boolean;
   display_order: number;
+  source_type: 'format' | 'template';
   content_area_config: {
     marginTop: number;
     marginBottom: number;
@@ -65,10 +96,13 @@ export class SupabaseDatabase {
     return data || [];
   }
 
+  /**
+   * Optimized Template Fetching using v_report_templates_with_format
+   */
   async getRandomTemplate(category: string): Promise<ReportTemplate | null> {
     try {
       const { data, error } = await supabase
-        .from('report_formats')
+        .from('v_report_templates_with_format')
         .select('*')
         .eq('is_active', true)
         .eq('category', category);
@@ -80,7 +114,7 @@ export class SupabaseDatabase {
       }
 
       const { data: defaultData } = await supabase
-        .from('report_formats')
+        .from('v_report_templates_with_format')
         .select('*')
         .eq('is_active', true)
         .eq('is_default', true)
@@ -101,66 +135,31 @@ export class SupabaseDatabase {
       throw new Error("Supabase missing");
     }
 
-    // 🔧 Shorten URLs
-    if (updates.image_url && updates.image_url.length > 200) {
-      console.log('🔧 Shortening image_url:', updates.image_url.length)
-      const driveMatch = updates.image_url.match(/\/d\/([a-zA-Z0-9_-]+)/)
-      if (driveMatch) {
-        updates.image_url = `https://drive.google.com/uc?id=${driveMatch[1]}`
-        console.log('✅ Shortened to:', updates.image_url)
-      } else {
-        updates.image_url = updates.image_url.slice(0, 200)
+    ['image', 'image_url', 'logo_url'].forEach(field => {
+      if (updates[field] && updates[field].length > 200) {
+        const driveMatch = updates[field].match(/\/d\/([a-zA-Z0-9_-]+)/)
+        if (driveMatch) {
+          updates[field] = `https://drive.google.com/uc?id=${driveMatch[1]}`
+        }
       }
-    }
-
-    if (updates.image && updates.image.length > 200) {
-      console.log('🔧 Shortening image:', updates.image.length)
-      const driveMatch = updates.image.match(/\/d\/([a-zA-Z0-9_-]+)/)
-      if (driveMatch) {
-        updates.image = `https://drive.google.com/uc?id=${driveMatch[1]}`
-        console.log('✅ Shortened to:', updates.image)
-      } else {
-        updates.image = updates.image.slice(0, 200)
-      }
-    }
+    })
 
     try {
-      console.log('🔧 [DB] Final payload:', updates)
-      
-      // STEP 1: UPDATE without select to avoid return-value complexity/RLS issues
       const { error: updateError } = await supabase
         .from(table)
         .update(updates)
         .eq('id', id)
 
-      if (updateError) {
-        console.error('🚨 [DB] UPDATE ERROR:', {
-          message: updateError.message,
-          code: updateError.code,
-          details: (updateError as any).details,
-          hint: (updateError as any).hint
-        })
-        throw updateError
-      }
+      if (updateError) throw updateError;
 
-      console.log('✅ [DB] UPDATE executed, now fetching...')
-
-      // STEP 2: FETCH updated record separately to verify and return
       const { data, error: selectError } = await supabase
         .from(table)
         .select('*')
         .eq('id', id)
         .single()
 
-      if (selectError) {
-        console.warn('⚠️ [DB] SELECT after UPDATE failed:', selectError.message)
-        // Return success even if select fails (the update itself didn't error)
-        return [{ id, ...updates }]
-      }
-
-      console.log('✅ [DB] UPDATE SUCCESS - Verified data:', data)
-      return [data]
-
+      if (selectError) return [{ id, ...updates }];
+      return [data];
     } catch (error: any) {
       console.error('💥 [DB] UPDATE FAILED:', error.message || error)
       throw error
@@ -209,15 +208,19 @@ export class SupabaseDatabase {
     return data === true;
   }
 
+  /**
+   * Optimized Bundle Fetch using 13 specialized Views
+   */
   async getStartupBundle() {
     try {
-      const [servicesRes, configRes, providersRes, itemsRes, assetsRes, formatsRes] = await Promise.all([
-        supabase.from('services').select('*'),
+      const [servicesRes, configRes, providersRes, itemsRes, assetsRes, formatsRes, gemstoneRes] = await Promise.all([
+        supabase.from('v_active_services').select('*'),
         supabase.from('config').select('*'),
-        supabase.from('payment_providers').select('*'),
-        supabase.from('store_items').select('*'),
-        supabase.from('image_assets').select('*'),
-        supabase.from('report_formats').select('*')
+        supabase.from('v_active_payment_methods').select('*'),
+        supabase.from('v_store_items_with_stock').select('*'),
+        supabase.from('v_image_assets_by_type').select('*'),
+        supabase.from('v_report_templates_with_format').select('*'),
+        supabase.from('v_active_gemstones').select('*')
       ]);
 
       return {
@@ -226,7 +229,8 @@ export class SupabaseDatabase {
         payment_providers: providersRes.data || [],
         store_items: itemsRes.data || [],
         image_assets: assetsRes.data || [],
-        report_formats: formatsRes.data || []
+        report_formats: formatsRes.data || [],
+        gemstones: gemstoneRes.data || []
       };
     } catch (err) {
       console.error('❌ [DB] Bundle fetch failed:', err);
@@ -257,9 +261,7 @@ export class SupabaseDatabase {
         .eq('order_id', data.order_id)
         .maybeSingle();
 
-      if (existing) {
-        return { data: existing, error: null };
-      }
+      if (existing) return { data: existing, error: null };
 
       return await supabase.from('transactions').insert(data).select().single();
     } catch (err) {
@@ -269,8 +271,6 @@ export class SupabaseDatabase {
   }
   
   async saveReading(readingData: any) {
-    console.log('💾 [DB] SAVE READING START:', readingData)
-    
     try {
       const { data, error } = await supabase
         .from('readings')
@@ -278,66 +278,31 @@ export class SupabaseDatabase {
         .select()
         .single();
 
-      if (error) {
-        console.error('❌ [DB] Save Reading FAILED:', {
-          message: error.message,
-          code: error.code,
-          hint: error.hint
-        })
-        throw error
-      }
-      
-      console.log('✅ [DB] Reading saved:', data?.id)
+      if (error) throw error;
       return { data, error: null };
     } catch (err: any) {
       console.error('💥 [DB] Save Reading ERROR:', err.message)
-      // FALLBACK: Save to localStorage if Supabase fails
       const fallbackKey = `reading_fallback_${Date.now()}`
       localStorage.setItem(fallbackKey, JSON.stringify(readingData))
-      console.log('💾 Saved to localStorage fallback:', fallbackKey)
       return { data: { ...readingData, id: fallbackKey }, error: err };
     }
   }
 
   normalizeInputs(serviceType: string, rawInputs: any) {
     const normalized = { ...rawInputs }
-    
-    // 🔧 DATE NORMALIZATION (all formats → YYYY-MM-DD)
     if (normalized.dob) {
       const dateStr = normalized.dob.toString()
       let parsed: Date | null = null
-      
       const ddmmyyyy = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/)
-      if (ddmmyyyy) {
-        parsed = new Date(`${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`)
-      }
-      
+      if (ddmmyyyy) parsed = new Date(`${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`)
       const mmddyyyy = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-      if (mmddyyyy) {
-        parsed = new Date(`${mmddyyyy[3]}-${mmddyyyy[1]}-${mmddyyyy[2]}`)
-      }
-      
-      if (!parsed && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        parsed = new Date(dateStr)
-      }
-      
-      if (parsed && !isNaN(parsed.getTime())) {
-        normalized.dob = parsed.toISOString().split('T')[0]
-      }
+      if (mmddyyyy) parsed = new Date(`${mmddyyyy[3]}-${mmddyyyy[1]}-${mmddyyyy[2]}`)
+      if (!parsed && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) parsed = new Date(dateStr)
+      if (parsed && !isNaN(parsed.getTime())) normalized.dob = parsed.toISOString().split('T')[0]
     }
-    
-    if (normalized.name) {
-      normalized.name = normalized.name.trim().toLowerCase()
-    }
-    
-    if (normalized.pob) {
-      normalized.pob = normalized.pob.trim().toLowerCase()
-    }
-    
-    if (normalized.tob) {
-      normalized.tob = normalized.tob.replace(/\s+/g, '')
-    }
-    
+    if (normalized.name) normalized.name = normalized.name.trim().toLowerCase()
+    if (normalized.pob) normalized.pob = normalized.pob.trim().toLowerCase()
+    if (normalized.tob) normalized.tob = normalized.tob.replace(/\s+/g, '')
     return normalized
   }
 
@@ -350,13 +315,13 @@ export class SupabaseDatabase {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
       const { data: txs, error } = await supabase
-        .from('transactions')
+        .from('v_recent_transactions')
         .select('*')
         .eq('user_id', user.id)
         .eq('service_type', serviceType)
         .eq('status', 'success')
-        .gte('created_at', since)
-        .order('created_at', { ascending: false });
+        .gte('transaction_date', since)
+        .order('transaction_date', { ascending: false });
 
       if (error || !txs) return { exists: false };
 
@@ -365,17 +330,8 @@ export class SupabaseDatabase {
         
         let isMatch = false;
         if (serviceType === 'astrology') {
-          isMatch = (
-            storedInputs.name === inputs.name &&
-            storedInputs.dob === inputs.dob &&
-            storedInputs.tob === inputs.tob &&
-            storedInputs.pob === inputs.pob
-          );
-        } else if (serviceType === 'numerology') {
-          isMatch = (storedInputs.name === inputs.name && storedInputs.dob === inputs.dob);
-        } else if (serviceType === 'palmistry') {
-          isMatch = (storedInputs.name === inputs.name && storedInputs.dob === inputs.dob);
-        } else if (serviceType === 'face-reading') {
+          isMatch = (storedInputs.name === inputs.name && storedInputs.dob === inputs.dob && storedInputs.tob === inputs.tob && storedInputs.pob === inputs.pob);
+        } else if (serviceType === 'numerology' || serviceType === 'palmistry' || serviceType === 'face-reading') {
           isMatch = (storedInputs.name === inputs.name && storedInputs.dob === inputs.dob);
         } else if (serviceType === 'tarot') {
           isMatch = (storedInputs.name === inputs.name && (storedInputs.card_name === inputs.card_name || storedInputs.question === inputs.question));
@@ -384,8 +340,10 @@ export class SupabaseDatabase {
         if (isMatch) {
           let readingData = null;
           if (tx.reading_id) {
-            const { data } = await supabase.from('readings').select('*').eq('id', tx.reading_id).single();
-            readingData = data;
+            const { data } = await supabase.from('v_user_readings_history').select('*').eq('reading_id', tx.reading_id).single();
+            if (data) {
+                readingData = { id: data.reading_id, ...data, timestamp: data.reading_date };
+            }
           }
           return { exists: true, transaction: tx, reading: readingData as Reading };
         }

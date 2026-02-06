@@ -8,7 +8,7 @@ import { cloudManager } from '../services/cloudManager';
 
 const Home: React.FC = () => {
   const { db } = useDb();
-  const { t } = useTranslation();
+  const { t, getRegionalPrice } = useTranslation();
   const { isAdminVerified } = useAuth();
   const navigate = useNavigate();
 
@@ -131,7 +131,7 @@ const Home: React.FC = () => {
 
                             <div className="mt-auto w-full pt-8 border-t border-skin-border/20 flex flex-col items-center gap-4">
                                 <div className="text-skin-accent font-mono font-black text-xl tracking-tighter group-hover:scale-110 transition-transform">
-                                    {service.price > 0 ? `₹${service.price}` : 'FREE'}    
+                                    {service.price > 0 ? getRegionalPrice(service.price).display : 'FREE'}    
                                 </div>
                                 <div className={`w-full py-3 rounded-full border transition-all ${isImplemented ? 'bg-amber-600 border-amber-400 text-white shadow-lg group-hover:bg-amber-500 group-hover:shadow-[0_5px_15px_rgba(245,158,11,0.3)]' : 'bg-skin-surface border-skin-border/40 group-hover:border-skin-accent'}`}>
                                     <span className="text-[10px] font-black uppercase tracking-[0.4em]">
