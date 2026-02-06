@@ -26,7 +26,7 @@ interface NumerologyAstrologyProps {
 const NumerologyAstrology: React.FC<NumerologyAstrologyProps> = ({ mode }) => {
   const reportPreviewRef = useRef<HTMLDivElement>(null);
   const paymentProcessingRef = useRef(false);
-  
+  const paymentSectionRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({ name: '', dob: '', pob: '', tob: '' });
   const [coords, setCoords] = useState<{ lat: number, lng: number } | null>(null);
   const [reading, setReading] = useState('');
@@ -171,74 +171,144 @@ const NumerologyAstrology: React.FC<NumerologyAstrologyProps> = ({ mode }) => {
   }, [formData, mode, language, coords]);
 
   const proceedToPayment = useCallback(() => {
-    if (paymentProcessingRef.current || isCheckingRegistry) return;
+  // Lock check
+  if (paymentProcessingRef.current) {
+    console.warn('⚠️ Payment already in progress, ignoring duplicate call');
+    return;
+  }
 
-    if (alreadyPaid && showCachedReport) {
+  if (isCheckingRegistry) return;
+
+  if (alreadyPaid && showCachedReport) {
+    setIsPaid(true);
+    setShowCachedReport(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  const title = mode === 'astrology' ? 'Your Astrology Destiny' : 'Your Numerology Summary';
+  const price = mode === 'astrology' ? 99 : 49;
+
+  paymentProcessingRef.current = true;
+  console.log('🔒 [Payment] Processing locked');
+
+  openPayment(async (paymentDetails?: any) => {
+    try {
+      console.log('💳 [Payment] Callback triggered with details:', paymentDetails);
+      
+      setPaymentSuccess(true);
       setIsPaid(true);
-      setShowCachedReport(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
 
-    const title = mode === 'astrology' ? 'Your Astrology Destiny' : 'Your Numerology Summary';
-    const price = mode === 'astrology' ? 99 : 49;
+      // Generate unique IDs
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substr(2, 9);
+      const orderId = paymentDetails?.orderId || `ORD-${user?.id?.substr(0, 8)}-${mode}-${timestamp}-${randomId}`;
+      const transactionId = paymentDetails?.transactionId || `TXN-${timestamp}-${randomId}`;
 
-    paymentProcessingRef.current = true;
+      console.log('💾 [Payment] Saving reading...');
 
-    openPayment(async (paymentDetails?: any) => {
-      try {
-        setPaymentSuccess(true);
-        setIsPaid(true);
+      // Save reading
+      const savedReading = await dbService.saveReading({
+        user_id: user?.id,
+        type: mode,
+        title: `${mode.toUpperCase()} Reading for ${formData.name}`,
+        subtitle: formData.dob,
+        content: reading,
+        meta_data: engineData,
+        is_paid: true,
+      });
 
-        const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-        const savedReading = await dbService.saveReading({
+      const readingId = savedReading?.data?.id;
+      console.log('✅ [Payment] Reading saved:', readingId);
+      
+      if (readingId) {
+        console.log('💾 [Payment] Recording transaction...');
+        
+        const txResult = await dbService.recordTransaction({
           user_id: user?.id,
-          type: mode,
-          title: `${mode.toUpperCase()} Reading for ${formData.name}`,
-          subtitle: formData.dob,
-          content: reading,
-          meta_data: engineData,
-          is_paid: true,
+          service_type: mode,
+          service_title: title,
+          amount: price,
+          currency: 'INR',
+          payment_method: paymentDetails?.method || 'test',
+          payment_provider: paymentDetails?.provider || 'manual',
+          order_id: orderId,
+          transaction_id: transactionId,
+          reading_id: readingId,
+          status: 'success',
+          metadata: { ...formData, paymentTimestamp: new Date().toISOString() },
         });
 
-        if (savedReading?.data?.id) {
-          await dbService.recordTransaction({
-            user_id: user?.id,
-            service_type: mode,
-            service_title: title,
-            amount: price,
-            currency: 'INR',
-            payment_method: paymentDetails?.method || 'test',
-            payment_provider: paymentDetails?.provider || 'manual',
-            order_id: orderId,
-            reading_id: savedReading.data.id,
-            status: 'success',
-            metadata: { ...formData, paymentTimestamp: new Date().toISOString() },
-          });
+        if (txResult?.error) {
+          console.error('❌ [Payment] Transaction recording failed:', txResult.error);
+        } else {
+          console.log('✅ [Payment] Transaction recorded:', txResult.data?.id);
         }
+      } else {
+        console.error('❌ [Payment] No reading ID, skipping transaction');
+      }
 
-        reportStateManager.saveReportState(mode, {
-          formData, reading, advancedReport: null, engineData, isPaid: true
-        });
+      // Save state
+      reportStateManager.saveReportState(mode, {
+        formData,
+        reading,
+        advancedReport: null,
+        engineData,
+        isPaid: true
+      });
 
+      console.log('📜 [Payment] Scrolling to top...');
+      
+      // ✅ SCROLL TO TOP AFTER PAYMENT
+      setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        console.log('✅ [Payment] Scrolled to top');
+      }, 500);
 
-        if (mode === 'astrology') {
-          setIsLoading(true);
-          const report = await generateAdvancedAstroReport({ ...formData, language: getLanguageName(language) }, engineData);
+      // Generate advanced report for astrology
+      if (mode === 'astrology' && !advancedReport) {
+        setIsLoading(true);
+        console.log('📊 [Payment] Generating advanced astrology report...');
+        
+        try {
+          const report = await generateAdvancedAstroReport({
+            ...formData,
+            language: getLanguageName(language)
+          }, engineData);
+          
           setAdvancedReport(report);
+          console.log('✅ [Payment] Advanced report generated');
+          
           reportStateManager.saveReportState(mode, {
-            formData, reading, advancedReport: report, engineData, isPaid: true
+            formData,
+            reading,
+            advancedReport: report,
+            engineData,
+            isPaid: true
           });
+        } catch (e) {
+          console.error("❌ [Payment] Advanced report failed:", e);
+        } finally {
           setIsLoading(false);
         }
-      } catch (dbErr) {
-        console.error("❌ Sync error:", dbErr);
-      } finally {
-        setTimeout(() => { paymentProcessingRef.current = false; }, 2000);
       }
-    }, title, price);
-  }, [mode, formData, reading, engineData, user, openPayment, language, alreadyPaid, showCachedReport]);
+
+      console.log('✅ [Payment] All operations completed successfully');
+
+    } catch (dbErr: any) {
+      console.error("❌ [Payment] Database sync error:", dbErr);
+      console.error('Error details:', dbErr.message, dbErr.code);
+      alert('Payment successful but saving failed. Please contact support with this error: ' + dbErr.message);
+    } finally {
+      // Unlock after 2 seconds
+      setTimeout(() => {
+        paymentProcessingRef.current = false;
+        console.log('🔓 [Payment] Processing unlocked');
+      }, 2000);
+    }
+  }, title, price);
+}, [mode, formData, reading, engineData, user, openPayment, language, advancedReport, isCheckingRegistry, alreadyPaid, showCachedReport]);
+
 
   const handleReadMore = async () => {
     if (!reading) return;

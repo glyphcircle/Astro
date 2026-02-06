@@ -76,7 +76,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
 
   const priceDisplay = getRegionalPrice(basePrice);
 
-  // ✅ FIXED: Only trigger callback, don't create transaction here
+  
+  // ✅ FIXED: Close modal AFTER parent callback completes
   const handlePaymentSuccess = async (details?: any) => {
     setIsLoading(false);
     setIsSuccess(true);
@@ -84,23 +85,23 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
 
     console.log('✅ [PaymentModal] Payment successful, calling parent callback');
 
-    // ✅ REMOVED: dbService.recordTransaction - Let parent handle this
-    // The parent component (proceedToPayment) will create the complete transaction record
-
-    // ✅ Call parent callback with payment details
     try {
+    // ✅ Wait for parent callback to complete
       await onSuccess(details);
       console.log('✅ [PaymentModal] Parent callback completed');
     } catch (error) {
       console.error('❌ [PaymentModal] Parent callback error:', error);
     }
 
+  // ✅ Show success for 2 seconds, then close
     setTimeout(() => {
       if (pendingReading && user) commitPendingReading();
       refreshUser();
       onClose(); 
-    }, 3000); 
+      console.log('✅ [PaymentModal] Modal closed');
+    }, 2000); // Reduced from 3000ms to 2000ms
   };
+
 
   const handleInitiatePayment = (specificMethod?: string) => {
     if (!securityService.checkSystemIntegrity()) {
