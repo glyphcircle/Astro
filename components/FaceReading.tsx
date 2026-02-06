@@ -16,10 +16,12 @@ import Card from './shared/Card';
 import SmartBackButton from './shared/SmartBackButton';
 import ServiceResult from './ServiceResult';
 import ReportLoader from './ReportLoader';
+import { SmartDatePicker } from './SmartAstroInputs';
 
 const FaceReading: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dob, setDob] = useState<string>('');
   const [reading, setReading] = useState<string>('');
   const [analysisData, setAnalysisData] = useState<FaceAnalysis | null>(null);
   
@@ -157,6 +159,10 @@ const FaceReading: React.FC = () => {
       setError('Please upload an image of your face first.');
       return;
     }
+    if (!dob) {
+      setError('Please provide your Date of Birth for age alignment.');
+      return;
+    }
 
     setIsLoading(true);
     setProgress(0);
@@ -172,7 +178,7 @@ const FaceReading: React.FC = () => {
     }, 600);
 
     try {
-      const result = await getFaceReading(imageFile, getLanguageName(language));
+      const result = await getFaceReading(imageFile, getLanguageName(language), dob);
       clearInterval(timer);
       setProgress(100);
       if (result.rawMetrics) {
@@ -186,7 +192,7 @@ const FaceReading: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [imageFile, language]);
+  }, [imageFile, dob, language]);
   
   const proceedToPayment = useCallback(() => {
     openPayment(() => {
@@ -202,7 +208,7 @@ const FaceReading: React.FC = () => {
     
     setIsCheckingRegistry(true);
     try {
-        const existing = await dbService.checkAlreadyPaid('face-reading', { name: user?.name });
+        const existing = await dbService.checkAlreadyPaid('face-reading', { name: user?.name, dob });
         if (existing.exists) {
             setRetrievedTx(existing.transaction);
             setReading(existing.reading?.content || reading);
@@ -297,7 +303,7 @@ const FaceReading: React.FC = () => {
                  </div>
                  <div className="flex gap-2">
                     <button onClick={() => setIsPaid(true)} className="bg-emerald-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest">📄 View</button>
-                    <button onClick={() => { setImageFile(null); setImagePreview(null); setReading(''); setAnalysisData(null); setRetrievedTx(null); }} className="bg-amber-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest">🆕 New Reading</button>
+                    <button onClick={() => { setImageFile(null); setImagePreview(null); setReading(''); setAnalysisData(null); setRetrievedTx(null); setDob(''); }} className="bg-amber-600 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest">🆕 New Reading</button>
                  </div>
               </div>
             </div>
@@ -310,7 +316,7 @@ const FaceReading: React.FC = () => {
 
           <div className="flex flex-col gap-8 items-center w-full">
               {/* INPUT SECTION */}
-              <div className="w-full max-w-md">
+              <div className="w-full max-w-md space-y-6">
                 {isCameraOpen ? (
                     <div className="w-full relative bg-black rounded-lg overflow-hidden border-2 border-amber-500 shadow-xl">
                         <video ref={videoRef} autoPlay playsInline muted className="w-full h-64 object-cover transform scale-x-[-1]" />
@@ -347,8 +353,16 @@ const FaceReading: React.FC = () => {
                         </div>
                     </div>
                 )}
+
+                <div className="bg-gray-900/40 p-6 rounded-2xl border border-amber-500/10 shadow-inner">
+                  <SmartDatePicker value={dob} onChange={setDob} />
+                  <p className="text-[10px] text-amber-500/50 mt-2 font-lora italic text-center">
+                    Birth date aligns facial evolution with your life stages (Mukha Samudrika).
+                  </p>
+                </div>
+
                 {imageFile && !isCameraOpen && (
-                  <Button onClick={handleGetReading} disabled={isLoading} className="mt-6 w-full">
+                  <Button onClick={handleGetReading} disabled={isLoading} className="w-full">
                       {isLoading ? t('analyzing') : t('getYourReading')}
                   </Button>
                 )}

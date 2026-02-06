@@ -1,4 +1,3 @@
-
 {
   "logout": "Déconnexion",
   "welcomeToPath": "Bienvenue sur Votre Chemin de Découverte",
@@ -45,7 +44,7 @@
   "yourSummary": "Votre résumé de {featureName}",
   "tarotReading": "Lecture de Tarot",
   "tarotPrompt": "Sélectionnez une carte des Arcanes Majeurs pour révéler sa signification mystique pour vous.",
-  "glyphCircle": "Cercle des Glyphes",
+  "glyphCircle": "Glyph Circle Backup",
   "enterCircle": "Entrez dans le cercle de la sagesse.",
   "username": "Nom d'utilisateur",
   "password": "Mot de passe",
@@ -60,7 +59,7 @@
   "confirmPassword": "Confirmez le mot de passe",
   "backToLogin": "Retour à la connexion",
   "signIn": "Se connecter",
-  "toContinue": "pour continuer vers le Cercle des Glyphes",
+  "toContinue": "pour continuer vers Glyph Circle Backup",
   "selectAccount": "Choisissez un compte",
   "useAnotherAccount": "Utiliser un autre compte",
   "enterOTP": "Entrez le code OTP",

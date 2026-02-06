@@ -44,14 +44,22 @@ export async function loadUserTheme(): Promise<ThemeConfig> {
     const supabaseTheme: ThemeConfig = {
       mode: (data.theme_mode as 'dark' | 'light') || localTheme.mode,
       colorVariant: (data.color_variant as any) || localTheme.colorVariant,
-      hoverOpacity: data.hover_opacity ? parseFloat(data.hover_opacity) : localTheme.hoverOpacity,
-      cardOpacity: data.card_opacity ? parseFloat(data.card_opacity) : localTheme.cardOpacity,
+      hover_opacity: data.hover_opacity ? parseFloat(data.hover_opacity) : localTheme.hoverOpacity,
+      card_opacity: data.card_opacity ? parseFloat(data.card_opacity) : localTheme.cardOpacity,
+    } as any;
+    
+    // Normalize properties (Supabase might use different snake_case)
+    const normalizedTheme: ThemeConfig = {
+      mode: supabaseTheme.mode,
+      colorVariant: supabaseTheme.colorVariant,
+      hoverOpacity: (supabaseTheme as any).hover_opacity || supabaseTheme.hoverOpacity,
+      cardOpacity: (supabaseTheme as any).card_opacity || supabaseTheme.cardOpacity,
     };
     
     // Update localStorage to match Supabase
-    saveThemeToLocalStorage(supabaseTheme);
+    saveThemeToLocalStorage(normalizedTheme);
     
-    return supabaseTheme;
+    return normalizedTheme;
   } catch (err) {
     console.error('❌ [THEME] Error in loadUserTheme:', err);
     return loadThemeFromLocalStorage();
@@ -122,6 +130,13 @@ export function applyTheme(theme: ThemeConfig): void {
   // Set theme mode and color attributes for CSS targeting
   root.setAttribute('data-theme', theme.mode);
   root.setAttribute('data-color', theme.colorVariant);
+  
+  // Sync the 'dark' class for Tailwind CSS class-based dark mode
+  if (theme.mode === 'dark') {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
   
   // Set specific numeric variables for opacities
   root.style.setProperty('--hover-opacity', theme.hoverOpacity.toString());

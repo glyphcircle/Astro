@@ -1,4 +1,3 @@
-
 {
   "logout": "Abmelden",
   "welcomeToPath": "Willkommen auf Deinem Weg der Entdeckung",
@@ -45,7 +44,7 @@
   "yourSummary": "Deine {featureName}-Zusammenfassung",
   "tarotReading": "Tarot-Lesung",
   "tarotPrompt": "Wähle eine Karte aus der Großen Arkana, um ihre mystische Bedeutung für dich zu enthüllen.",
-  "glyphCircle": "Glyphenkreis",
+  "glyphCircle": "Glyph Circle Backup",
   "enterCircle": "Tritt ein in den Kreis der Weisheit.",
   "username": "Benutzername",
   "password": "Passwort",
@@ -60,7 +59,7 @@
   "confirmPassword": "Passwort bestätigen",
   "backToLogin": "Zurück zum Login",
   "signIn": "Anmelden",
-  "toContinue": "um zum Glyphenkreis fortzufahren",
+  "toContinue": "um zum Glyph Circle Backup fortzufahren",
   "selectAccount": "Wähle ein Konto",
   "useAnotherAccount": "Ein anderes Konto verwenden",
   "enterOTP": "OTP eingeben",

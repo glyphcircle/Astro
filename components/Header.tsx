@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation';
 import { useAuth } from '../context/AuthContext';
@@ -39,16 +38,18 @@ const Header: React.FC<{ onLogout: () => void; isMobile?: boolean }> = ({ onLogo
                         onClick={() => setIsMasterToolsOpen(true)}
                         className="flex items-center justify-center w-10 h-10 rounded-full bg-black/40 hover:bg-amber-500 hover:text-black backdrop-blur-md border border-amber-500/30 transition-all shadow-lg text-xl active:scale-90"
                         title="Master Registry Tools"
+                        aria-label="Admin Tools"
                     >
                         ⚙️
                     </button>
                 )}
                 
-                {/* 🌙 MOON ICON (Theme Toggle) */}
+                {/* 🌙 MOON/SUN ICON (Theme Toggle) */}
                 <button 
                     onClick={toggleMode}
                     className="flex items-center justify-center w-10 h-10 rounded-full bg-black/40 hover:bg-amber-500 hover:text-black backdrop-blur-md border border-amber-500/30 transition-all shadow-lg text-xl active:scale-90"
                     title={theme.mode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    aria-label="Toggle Theme"
                 >
                     {theme.mode === 'dark' ? '🌙' : '☀️'}
                 </button>
@@ -58,14 +59,21 @@ const Header: React.FC<{ onLogout: () => void; isMobile?: boolean }> = ({ onLogo
             </div>
 
             {/* Mobile Icons */}
-            <div className="sm:hidden flex items-center gap-2">
-                <button onClick={toggleMode} className="text-xl p-1 text-skin-accent">
+            <div className="sm:hidden flex items-center gap-4">
+                {/* 🌙 MOBILE THEME TOGGLE */}
+                <button 
+                    onClick={toggleMode} 
+                    className="text-2xl p-1 text-skin-accent transition-transform active:scale-90"
+                    aria-label="Toggle Theme"
+                >
                     {theme.mode === 'dark' ? '🌙' : '☀️'}
                 </button>
+                
                 {isSovereign && (
                     <button 
                         onClick={() => setIsMasterToolsOpen(true)} 
-                        className="text-2xl text-amber-500 p-1"
+                        className="text-2xl text-amber-500 p-1 active:scale-90"
+                        aria-label="Admin Tools"
                     >
                         ⚙️
                     </button>

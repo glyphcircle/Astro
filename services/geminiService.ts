@@ -316,11 +316,12 @@ export const getPalmReading = async (imageFile: File, language: string = 'Englis
   return { rawMetrics: json, textReading: json.textReading || "Analysis complete." };     
 };
 
-export const getFaceReading = async (imageFile: File, language: string = 'English'): Promise<FaceMetricResponse> => {
+export const getFaceReading = async (imageFile: File, language: string = 'English', dob?: string): Promise<FaceMetricResponse> => {
   const ai = getAi();
+  const ageContext = dob ? `User was born on ${dob}. ` : '';
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: { parts: [{ inlineData: { mimeType: imageFile.type, data: await fileToBase64(imageFile) } }, { text: `${DETAIL_SYSTEM_PROMPT}\nVedic Face reading in ${language}. Provide a massive 4-part physiological profile.` }] },
+    contents: { parts: [{ inlineData: { mimeType: imageFile.type, data: await fileToBase64(imageFile) } }, { text: `${DETAIL_SYSTEM_PROMPT}\n${ageContext}Vedic Face reading in ${language}. Provide a massive 4-part physiological profile.` }] },
     config: { temperature: 0.2, responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { textReading: { type: Type.STRING } } } }
   });
   const json = JSON.parse(response.text || "{}");

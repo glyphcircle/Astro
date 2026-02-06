@@ -1,4 +1,3 @@
-
 // --- SCHEMA DEFINITION & SEED DATA ---
 const INITIAL_SCHEMA: Record<string, any[]> = {
   users: [
@@ -47,7 +46,7 @@ const INITIAL_SCHEMA: Record<string, any[]> = {
     { id: 'store', name: 'Vedic Store', price: 0, description: 'Authentic Rudraksha, Yantras, and Gemstones for your spiritual path.', path: '/store', status: 'active', image: 'photo-1600609842388-3e4b489d71c6' }
   ],
   config: [
-      { id: 'app_title', key: 'title', value: 'Glyph Circle', status: 'active'},
+      { id: 'app_title', key: 'title', value: 'Glyph Circle Backup', status: 'active'},
       { id: 'admin_secret_key', key: 'admin_portal_secret', value: '1509', status: 'active'},
       { id: 'card_hover_opacity', key: 'card_hover_opacity', value: '0.85', status: 'active'},
       { id: 'currency_default', key: 'currency', value: 'INR', status: 'active'},
@@ -396,4 +395,3 @@ class SqliteService {
 }
 
 export const sqliteService = new SqliteService();
-

@@ -1,4 +1,3 @@
-
 {
   "logout": "登出",
   "welcomeToPath": "欢迎来到您的发现之路",
@@ -45,7 +44,7 @@
   "yourSummary": "您的{featureName}摘要",
   "tarotReading": "塔罗牌解读",
   "tarotPrompt": "从大阿尔克那中选择一张牌，揭示它对您的神秘意义。",
-  "glyphCircle": "符文圈",
+  "glyphCircle": "Glyph Circle Backup",
   "enterCircle": "进入智慧的圈子。",
   "username": "用户名",
   "password": "密码",
@@ -60,7 +59,7 @@
   "confirmPassword": "确认密码",
   "backToLogin": "返回登录",
   "signIn": "登录",
-  "toContinue": "以继续访问符文圈",
+  "toContinue": "以继续访问 Glyph Circle Backup",
   "selectAccount": "选择一个账户",
   "useAnotherAccount": "使用另一个账户",
   "enterOTP": "输入OTP",

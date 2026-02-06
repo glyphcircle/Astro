@@ -1,4 +1,3 @@
-
 // VEDIC ASTROLOGY ENGINE
 // Implements Lahiri Ayanamsa, Sidereal Longitudes, and Vimshottari Dasha
 
@@ -66,6 +65,7 @@ export interface AstroChart {
     sunrise: string;
     timezone: string;
   };
+  lagnaSign: number; // Root property for easy access
   lagna: { 
     sign: number; 
     signName: string; 
@@ -92,7 +92,7 @@ export interface AstroChart {
 }
 
 // --- CONSTANTS ---
-const RASHIS = ['', 'Mesha (Ari)', 'Vrishabha (Tau)', 'Mithuna (Gem)', 'Karka (Can)', 'Simha (Leo)', 'Kanya (Vir)', 'Tula (Lib)', 'Vrishchika (Sco)', 'Dhanu (Sag)', 'Makara (Cap)', 'Kumbha (Aq)', 'Meena (Pis)'];
+const RASHIS = ['', 'Mesha (Aries)', 'Vrishabha (Taurus)', 'Mithuna (Gemini)', 'Karka (Cancer)', 'Simha (Leo)', 'Kanya (Virgo)', 'Tula (Libra)', 'Vrishchika (Scorpio)', 'Dhanu (Sagittarius)', 'Makara (Capricorn)', 'Kumbha (Aquarius)', 'Meena (Pisces)'];
 const RASHI_LORDS = ['', 'Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
 
 const NAKSHATRAS = [
@@ -120,6 +120,7 @@ const normalizeDeg = (deg: number): number => {
 const J2000 = 2451545.0;
 
 const getJulianDay = (date: Date): number => {
+    // date.getTime() is in UTC milliseconds
     return (date.getTime() / 86400000) + 2440587.5;
 };
 
@@ -140,6 +141,7 @@ const getMeanLongitude = (planet: string, T: number): number => {
 };
 
 const getAyanamsa = (T: number): number => {
+    // Standard Lahiri Ayanamsa approximation
     return 23.85 + (T * 100 * (50.29 / 3600)); 
 };
 
@@ -176,63 +178,106 @@ const getNakshatra = (deg: number): { name: string; lord: string; pada: number }
 const calculateLagna = (date: Date, lat: number, lng: number): number => {
     const JD = getJulianDay(date);
     const T = (JD - J2000) / 36525;
-    let GMST = normalizeDeg(280.4606 + 360.9856 * (JD - 2451545.0));
-    const LMST = normalizeDeg(GMST + lng);
-    const ramcRad = LMST * Math.PI / 180;
-    const epsRad = 23.44 * Math.PI / 180;
+    // Calculate Greenwich Mean Sidereal Time (GMST) in degrees
+    const GMST = normalizeDeg(280.46061837 + 360.98564736629 * (JD - 2451545.0));
+    // Local Sidereal Time (LST)
+    const LST = normalizeDeg(GMST + lng);
+    
+    const lstRad = LST * Math.PI / 180;
+    const epsRad = 23.439 * Math.PI / 180; // Obliquity of the ecliptic
     const latRad = lat * Math.PI / 180;
-    const num = Math.cos(ramcRad);
-    const den = -Math.sin(ramcRad) * Math.cos(epsRad) - Math.tan(latRad) * Math.sin(epsRad);
-    const ascDeg = normalizeDeg(Math.atan2(num, den) * 180 / Math.PI);
-    return normalizeDeg(ascDeg - getAyanamsa(T));
+    
+    const num = Math.cos(lstRad);
+    const den = -Math.sin(lstRad) * Math.cos(epsRad) - Math.tan(latRad) * Math.sin(epsRad);
+    
+    const tropicalAsc = normalizeDeg(Math.atan2(num, den) * 180 / Math.PI);
+    // Sidereal Ascendant using Lahiri Ayanamsa
+    return normalizeDeg(tropicalAsc - getAyanamsa(T));
 };
 
 export const calculateAstrology = (input: AstroInput): AstroChart => {
-    const lat = input.lat || 28.6139;
+    const lat = input.lat || 28.6139; // Default New Delhi
     const lng = input.lng || 77.2090;
     const date = new Date(`${input.dob}T${input.tob || '12:00'}`);
     
+    // 1. Calculate Sidereal Lagna (Ascendant)
     const lagnaAbs = calculateLagna(date, lat, lng);
     const lagnaSign = Math.floor(lagnaAbs / 30) + 1;
     const lagnaNak = getNakshatra(lagnaAbs);
 
+    // 2. Calculate Sidereal Positions for 9 Grahas
     const planetNames = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
     const planets: Planet[] = planetNames.map(name => {
         const { deg, retro } = getSiderealPosition(name, date);
         const sign = Math.floor(deg / 30) + 1;
+        
+        // Calculate house based on Whole Sign House System (standard Vedic)
         let house = (sign - lagnaSign + 1);
         if (house <= 0) house += 12;
+        
         const nak = getNakshatra(deg);
         return {
-            name, sign, signName: RASHIS[sign], fullDegree: deg, normDegree: deg % 30,
-            house, isRetrograde: retro, nakshatra: nak.name, nakshatraLord: nak.lord,
-            pada: nak.pada, speed: name === 'Moon' ? 13 : 1, shadbala: 70 + Math.random() * 30, rank: 0
+            name, 
+            sign, 
+            signName: RASHIS[sign], 
+            fullDegree: deg, 
+            normDegree: deg % 30,
+            house, 
+            isRetrograde: retro, 
+            nakshatra: nak.name, 
+            nakshatraLord: nak.lord,
+            pada: nak.pada, 
+            speed: name === 'Moon' ? 13 : 1, 
+            shadbala: 70 + Math.random() * 30, 
+            rank: 0
         };
     });
 
+    // 3. Define 12 Bhava (Houses)
     const houses: House[] = Array.from({ length: 12 }, (_, i) => {
         const num = i + 1;
         let sign = (lagnaSign + num - 1);
         if (sign > 12) sign -= 12;
         return {
-            number: num, sign, signName: RASHIS[sign], lord: RASHI_LORDS[sign],
+            number: num, 
+            sign, 
+            signName: RASHIS[sign], 
+            lord: RASHI_LORDS[sign],
             planets: planets.filter(p => p.house === num).map(p => p.name),
             type: [1, 4, 7, 10].includes(num) ? 'Kendra' : [5, 9].includes(num) ? 'Trikona' : 'Neutral'
         };
     });
 
-    // Dasha logic
+    // 4. Calculate Vimshottari Dasha (Simplified Current Period)
     const moon = planets.find(p => p.name === 'Moon')!;
     const moonNakIdx = NAKSHATRAS.findIndex(n => n.n === moon.nakshatra);
     const dashaOrder = ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury'];
     const startLord = dashaOrder[moonNakIdx % 9];
     
-    const currentDasha: DashaPeriod = { planet: startLord, start: '2020', end: '2030', duration: '10 Years' };
-    const timeline: DashaPeriod[] = dashaOrder.map(p => ({ planet: p, start: '2020', end: '2030', duration: '10 Years' }));
+    const currentDasha: DashaPeriod = { 
+        planet: startLord, 
+        start: new Date().getFullYear().toString(), 
+        end: (new Date().getFullYear() + 7).toString(), 
+        duration: '7 Years' 
+    };
+    const timeline: DashaPeriod[] = dashaOrder.map(p => ({ 
+        planet: p, 
+        start: '2024', 
+        end: '2031', 
+        duration: '7 Years' 
+    }));
 
+    // 5. Generate Recommendations
     const recommendations: Recommendation = {
       gemstones: {
-        primary: { name: 'Yellow Sapphire', p: 'Jupiter', m: 'Gold', f: 'Index', d: 'Thursday', mantra: 'Om Gram Greem Graum Sah Gurave Namah' },
+        primary: { 
+          name: 'Yellow Sapphire', 
+          p: 'Jupiter', 
+          m: 'Gold', 
+          f: 'Index', 
+          d: 'Thursday', 
+          mantra: 'Om Gram Greem Graum Sah Gurave Namah' 
+        },
         secondary: [],
         avoid: ['Blue Sapphire']
       },
@@ -247,10 +292,31 @@ export const calculateAstrology = (input: AstroInput): AstroChart => {
     };
 
     return {
-        meta: { ayanamsha: 'Lahiri', sunrise: '06:00 AM', timezone: 'Local' },
-        lagna: { sign: lagnaSign, signName: RASHIS[lagnaSign], degree: lagnaAbs % 30, nakshatra: lagnaNak.name, lord: RASHI_LORDS[lagnaSign] },
-        planets, houses, dashas: { current: currentDasha, timeline }, yogas: [],
-        panchang: { tithi: 'Pratipada', yoga: 'Sobhana', karana: 'Bava', nakshatra: moon.nakshatra, sunrise: '06:00 AM', ayanamsa: 'Lahiri' },
+        meta: { 
+            ayanamsha: 'Lahiri', 
+            sunrise: '06:00 AM', 
+            timezone: 'Local' 
+        },
+        lagnaSign: lagnaSign,
+        lagna: { 
+            sign: lagnaSign, 
+            signName: RASHIS[lagnaSign], 
+            degree: lagnaAbs % 30, 
+            nakshatra: lagnaNak.name, 
+            lord: RASHI_LORDS[lagnaSign] 
+        },
+        planets, 
+        houses, 
+        dashas: { current: currentDasha, timeline }, 
+        yogas: [],
+        panchang: { 
+            tithi: 'Pratipada', 
+            yoga: 'Sobhana', 
+            karana: 'Bava', 
+            nakshatra: moon.nakshatra, 
+            sunrise: '06:00 AM', 
+            ayanamsa: 'Lahiri' 
+        },
         recommendations
     };
 };

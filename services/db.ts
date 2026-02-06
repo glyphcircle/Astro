@@ -313,6 +313,8 @@ export class SupabaseDatabase {
           isMatch = (storedInputs.name === inputs.name && storedInputs.dob === inputs.dob);
         } else if (serviceType === 'palmistry') {
           isMatch = (storedInputs.name === inputs.name && storedInputs.dob === inputs.dob);
+        } else if (serviceType === 'face-reading') {
+          isMatch = (storedInputs.name === inputs.name && storedInputs.dob === inputs.dob);
         } else if (serviceType === 'tarot') {
           isMatch = (storedInputs.name === inputs.name && (storedInputs.card_name === inputs.card_name || storedInputs.question === inputs.question));
         }

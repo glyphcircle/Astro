@@ -1,4 +1,3 @@
-
 {
   "logout": "Выйти",
   "welcomeToPath": "Добро пожаловать на Ваш Путь Открытий",
@@ -45,7 +44,7 @@
   "yourSummary": "Ваше резюме по {featureName}",
   "tarotReading": "Чтение Таро",
   "tarotPrompt": "Выберите карту из Старших Арканов, чтобы раскрыть ее мистическое значение для вас.",
-  "glyphCircle": "Круг Глифов",
+  "glyphCircle": "Glyph Circle Backup",
   "enterCircle": "Войдите в круг мудрости.",
   "username": "Имя пользователя",
   "password": "Пароль",
@@ -60,7 +59,7 @@
   "confirmPassword": "Подтвердите пароль",
   "backToLogin": "Вернуться ко входу",
   "signIn": "Войти",
-  "toContinue": "чтобы продолжить в Круге Глифов",
+  "toContinue": "чтобы продолжить в Glyph Circle Backup",
   "selectAccount": "Выберите аккаунт",
   "useAnotherAccount": "Использовать другой аккаунт",
   "enterOTP": "Введите OTP",

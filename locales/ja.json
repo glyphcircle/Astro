@@ -1,4 +1,3 @@
-
 {
   "logout": "ログアウト",
   "welcomeToPath": "発見の道へようこそ",
@@ -45,7 +44,7 @@
   "yourSummary": "あなたの{featureName}の要約",
   "tarotReading": "タロット占い",
   "tarotPrompt": "大アルカナからカードを1枚選んで、あなたにとっての神秘的な意味を明らかにします。",
-  "glyphCircle": "グリフサークル",
+  "glyphCircle": "Glyph Circle Backup",
   "enterCircle": "知恵の輪に入ります。",
   "username": "ユーザー名",
   "password": "パスワード",
@@ -60,7 +59,7 @@
   "confirmPassword": "パスワードの確認",
   "backToLogin": "ログインに戻る",
   "signIn": "サインイン",
-  "toContinue": "グリフサークルを続けるには",
+  "toContinue": "Glyph Circle Backupを続けるには",
   "selectAccount": "アカウントを選択",
   "useAnotherAccount": "別のアカウントを使用",
   "enterOTP": "OTPを入力",

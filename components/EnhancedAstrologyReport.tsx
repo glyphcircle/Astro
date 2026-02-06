@@ -64,6 +64,10 @@ const EnhancedAstrologyReport: React.FC<EnhancedAstrologyReportProps> = ({
           <p className="text-xl font-lora italic opacity-70">
             Birth: {new Date(data.birthDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
           </p>
+          {/* Explicit Lagna Highlight */}
+          <div className="mt-8 px-6 py-3 bg-amber-900/5 border border-amber-900/10 rounded-full">
+            <span className="text-xs font-black uppercase tracking-[0.3em] text-amber-800">Soul Origin: {data.lagna.signName} Ascendant</span>
+          </div>
           <div className="mt-auto pt-20">
             <p className="text-[10px] font-cinzel font-black uppercase tracking-[0.5em] opacity-40 text-[#2d0a18]">
               Sealed by the Sovereign Registry • {new Date().getFullYear()}
@@ -79,23 +83,23 @@ const EnhancedAstrologyReport: React.FC<EnhancedAstrologyReportProps> = ({
           
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-12">
              {[
-               { l: 'Ascendant', v: data.lagna.signName, i: '🌅' },
+               { l: 'Ascendant (Lagna)', v: `${data.lagna.signName} (${data.lagna.degree.toFixed(2)}°)`, i: '🌅' },
                { l: 'Moon Sign', v: data.panchang.nakshatra, i: '🌙' },
                { l: 'Sun Sign', v: data.planets.find((p:any)=>p.name==='Sun')?.signName, i: '☀️' },
                { l: 'Tithi', v: data.panchang.tithi, i: '🌊' },
-               { l: 'Nakshatra', v: data.lagna.nakshatra, i: '⭐' },
+               { l: 'Lagna Nakshatra', v: data.lagna.nakshatra, i: '⭐' },
                { l: 'Yoga', v: data.panchang.yoga, i: '✨' }
              ].map((item, idx) => (
                 <div key={idx} className="p-8 bg-white/60 border border-amber-600/10 rounded-3xl text-center shadow-sm">
                    <div className="text-4xl mb-3">{item.i}</div>
                    <div className="text-[11px] font-black uppercase text-amber-600 mb-2 tracking-widest">{item.l}</div>
-                   <div className="text-md font-cinzel font-bold text-amber-950">{item.v}</div>
+                   <div className="text-md font-cinzel font-bold text-amber-950 leading-tight">{item.v}</div>
                 </div>
              ))}
           </div>
 
           <div className="mt-12">
-             <h4 className="text-xl font-cinzel font-black uppercase text-[#4a0404] mb-8 border-b-2 border-amber-600/10 pb-4">Planetary Positions</h4>
+             <h4 className="text-xl font-cinzel font-black uppercase text-[#4a0404] mb-8 border-b-2 border-amber-600/10 pb-4">Planetary positions</h4>
              <table className="w-full text-left text-sm">
                <thead>
                  <tr className="border-b border-amber-900/10 text-amber-900/50 uppercase font-black text-[10px] tracking-widest">
