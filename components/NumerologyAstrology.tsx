@@ -320,9 +320,6 @@ const NumerologyAstrology: React.FC<NumerologyAstrologyProps> = ({ mode }) => {
   }
 }, [formData, mode, language, coords, reportPreviewRef]);
 
-  // At the top of your component, add this ref:
-const paymentProcessingRef = useRef(false);
-
 // Update proceedToPayment:
 const proceedToPayment = useCallback(() => {
   // ✅ LOCK: Prevent duplicate payment processing
