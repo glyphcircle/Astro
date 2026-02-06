@@ -18,7 +18,7 @@ declare global {
 interface PaymentModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSuccess: (details?: any) => void;
+  onSuccess: (details?: any) => void | Promise<void>; // ✅ Support async callbacks
   basePrice: number; 
   serviceName: string;
 }
@@ -76,25 +76,29 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
 
   const priceDisplay = getRegionalPrice(basePrice);
 
+  // ✅ FIXED: Only trigger callback, don't create transaction here
   const handlePaymentSuccess = async (details?: any) => {
     setIsLoading(false);
     setIsSuccess(true);
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
 
-    if (user) {
-        dbService.recordTransaction({
-          user_id: user.id,
-          amount: basePrice,
-          description: serviceName,
-          status: 'success'
-        });
+    console.log('✅ [PaymentModal] Payment successful, calling parent callback');
+
+    // ✅ REMOVED: dbService.recordTransaction - Let parent handle this
+    // The parent component (proceedToPayment) will create the complete transaction record
+
+    // ✅ Call parent callback with payment details
+    try {
+      await onSuccess(details);
+      console.log('✅ [PaymentModal] Parent callback completed');
+    } catch (error) {
+      console.error('❌ [PaymentModal] Parent callback error:', error);
     }
 
-    onSuccess(details); 
     setTimeout(() => {
-        if (pendingReading && user) commitPendingReading();
-        refreshUser();
-        onClose(); 
+      if (pendingReading && user) commitPendingReading();
+      refreshUser();
+      onClose(); 
     }, 3000); 
   };
 
@@ -105,9 +109,25 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
     }
     setIsLoading(true);
 
+    // Generate payment details
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substr(2, 9);
+    
+    const paymentDetails = {
+      method: specificMethod || 'test',
+      provider: activeProvider?.provider_type || 'manual',
+      orderId: `ORD-${timestamp}-${randomId}`,
+      transactionId: `TXN-${timestamp}-${randomId}`,
+      amount: basePrice,
+      currency: currency,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('💳 [PaymentModal] Processing payment:', paymentDetails);
+
     // Mock/Test behavior
     if (!activeProvider || activeProvider.api_key.includes('12345678') || !activeProvider.api_key) {
-      setTimeout(() => handlePaymentSuccess({ method: specificMethod || 'test', provider: 'mock' }), 1500);
+      setTimeout(() => handlePaymentSuccess(paymentDetails), 1500);
       return;
     }
 
@@ -118,14 +138,28 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
         currency: currency, 
         name: "Glyph Circle",
         description: serviceName,
-        handler: (res: any) => handlePaymentSuccess({ ...res, method: specificMethod || 'razorpay' }),
+        handler: (res: any) => {
+          const razorpayDetails = {
+            ...paymentDetails,
+            razorpay_payment_id: res.razorpay_payment_id,
+            razorpay_order_id: res.razorpay_order_id,
+            razorpay_signature: res.razorpay_signature
+          };
+          handlePaymentSuccess(razorpayDetails);
+        },
         prefill: { name: user?.name, email: user?.email },
-        theme: { color: isLight ? "#92400e" : "#F59E0B" }
+        theme: { color: isLight ? "#92400e" : "#F59E0B" },
+        modal: {
+          ondismiss: () => {
+            setIsLoading(false);
+            console.log('⚠️ [PaymentModal] User closed Razorpay modal');
+          }
+        }
       };
       const rzp = new window.Razorpay(options);
       rzp.open();
     } else {
-      setTimeout(() => handlePaymentSuccess({ method: 'card', provider: activeProvider.provider_type }), 1500);
+      setTimeout(() => handlePaymentSuccess(paymentDetails), 1500);
     }
   };
 
@@ -230,6 +264,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
                         key={method.id} 
                         onClick={() => handleInitiatePayment(method.name.toLowerCase())} 
                         className="flex flex-col items-center gap-2 group cursor-pointer transition-all active:scale-90"
+                        disabled={isLoading}
                       >
                         <div className={`w-14 h-14 flex items-center justify-center bg-white rounded-2xl p-2.5 border-2 transition-all shadow-md overflow-hidden ${
                           isLight ? 'border-amber-100 group-hover:border-amber-600' : 'border-transparent group-hover:border-amber-500/50 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]'
