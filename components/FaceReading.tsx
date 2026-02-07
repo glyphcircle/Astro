@@ -15,7 +15,6 @@ import { cloudManager } from '../services/cloudManager';
 import Card from './shared/Card';
 import SmartBackButton from './shared/SmartBackButton';
 import ServiceResult from './ServiceResult';
-import ReportLoader from './ReportLoader';
 import { SmartDatePicker } from './SmartAstroInputs';
 
 const FaceReading: React.FC = () => {
@@ -172,10 +171,10 @@ const FaceReading: React.FC = () => {
 
     const timer = setInterval(() => {
         setProgress(prev => {
-            if (prev >= 90) return prev;
-            return prev + (Math.random() * 8);
+            if (prev >= 92) return prev;
+            return prev + (Math.random() * 5);
         });
-    }, 600);
+    }, 400);
 
     try {
       const result = await getFaceReading(imageFile, getLanguageName(language), dob);
@@ -224,6 +223,15 @@ const FaceReading: React.FC = () => {
     }
 
     proceedToPayment();
+  };
+
+  const getLoadingMessage = (p: number) => {
+    if (p < 20) return "Scanning physiological structure...";
+    if (p < 40) return "Identifying Samudrika landmarks...";
+    if (p < 60) return "Analyzing planetary correspondences...";
+    if (p < 80) return "Extracting karmic signatures...";
+    if (p < 95) return "Finalizing character synthesis...";
+    return "Manifesting destiny...";
   };
 
   const renderVedicDashboard = () => {
@@ -370,7 +378,7 @@ const FaceReading: React.FC = () => {
 
               {/* RESULTS SECTION - STACKED */}
               <div className="w-full max-w-5xl">
-                {isLoading && <ProgressBar progress={progress} message="Mapping Facial Landmarks..." estimatedTime="Approx. 10 seconds" />}
+                {isLoading && <ProgressBar progress={progress} message={getLoadingMessage(progress)} estimatedTime="Approx. 10 seconds" />}
                 {error && <p className="text-red-400 text-center">{error}</p>}
                 
                 {analysisData && !isLoading && (
