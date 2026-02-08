@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { createSageSession } from '../services/geminiService';
+import { createSageSession } from '../services/aiService';
 import { useAuth } from '../context/AuthContext';
 import { ACTION_POINTS } from '../services/gamificationConfig';
 

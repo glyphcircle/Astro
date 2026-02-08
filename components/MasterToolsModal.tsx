@@ -37,7 +37,7 @@ const MasterToolsModal: React.FC<MasterToolsModalProps> = ({ isVisible, onClose 
             <button onClick={onClose} className="text-gray-500 hover:text-white text-3xl transition-colors">&times;</button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-8 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="grid grid-cols-2 gap-4 mb-8 max-h-[45vh] overflow-y-auto pr-2 custom-scrollbar">
             {CONFIG_TABLES.map((t) => {
                 const count = db[t.key]?.length || 0;
                 return (
@@ -55,7 +55,13 @@ const MasterToolsModal: React.FC<MasterToolsModalProps> = ({ isVisible, onClose 
             })}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 pt-6 border-t border-white/5">
+        <div className="grid grid-cols-1 gap-3 pt-6 border-t border-white/5">
+            <button 
+                onClick={() => { onClose(); navigate('/admin/payment-settings'); }} 
+                className="bg-orange-600 hover:bg-orange-500 border border-orange-400 text-white text-[11px] py-4 rounded-xl font-black transition-all uppercase tracking-[0.3em] shadow-lg active:scale-95 flex items-center justify-center gap-2"
+            >
+                <span>💳</span> Payment QR Settings
+            </button>
             <button 
                 onClick={() => { onClose(); navigate('/admin/dashboard'); }} 
                 className="bg-gray-800 hover:bg-gray-700 border border-white/10 text-white text-[11px] py-4 rounded-xl font-black transition-all uppercase tracking-[0.3em] shadow-lg active:scale-95"

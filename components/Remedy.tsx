@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 // @ts-ignore
 import { Link } from 'react-router-dom';
-import { getRemedy } from '../services/geminiService';
+import { getRemedy } from '../services/aiService';
 import Button from './shared/Button';
 import ProgressBar from './shared/ProgressBar';
 import { useTranslation } from '../hooks/useTranslation';

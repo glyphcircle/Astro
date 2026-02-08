@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getAstroNumeroReading, generateAdvancedAstroReport } from '../services/geminiService';
+import { getAstroNumeroReading, generateAdvancedAstroReport } from '../services/aiService';
 import { calculateNumerology } from '../services/numerologyEngine';
 import { calculateAstrology } from '../services/astrologyEngine';
 import Button from './shared/Button';

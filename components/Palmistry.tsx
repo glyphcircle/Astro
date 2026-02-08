@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getPalmReading, translateText } from '../services/geminiService';
+import { getPalmReading, translateText } from '../services/aiService';
 import { calculatePalmistry, PalmAnalysis } from '../services/palmistryEngine';
 import { dbService } from '../services/db';
 import Button from './shared/Button';

@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 // @ts-ignore
 import { Link } from 'react-router-dom';
 import Card from './shared/Card';
 import Button from './shared/Button';
 import { useTranslation } from '../hooks/useTranslation';
-import { getMuhurat } from '../services/geminiService';
+import { getMuhurat } from '../services/aiService';
 import { SmartDatePicker } from './SmartAstroInputs';
 import FullReport from './FullReport';
 import { useAuth } from '../context/AuthContext';

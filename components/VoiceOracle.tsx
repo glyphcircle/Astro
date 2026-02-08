@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Card from './shared/Card';
 import VoiceInput from './VoiceInput';
 import Button from './shared/Button';
-import { createSageSession } from '../services/geminiService';
+import { createSageSession } from '../services/aiService';
 import { useTranslation } from '../hooks/useTranslation';
 import { useAuth } from '../context/AuthContext';
 import { ACTION_POINTS } from '../services/gamificationConfig';

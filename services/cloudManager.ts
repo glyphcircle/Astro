@@ -1,4 +1,3 @@
-
 import { dbService } from './db';
 
 export interface CloudProvider {
@@ -63,40 +62,41 @@ class CloudManager {
     return this.resolveImage(fallbackUrl);
   }
 
-  public resolveImage(url: string | undefined): string {
-    if (!url) return '';
-    url = url.trim();
+  public resolveImage(url: string | undefined | null): string {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
     
     // 1. RAW ID DETECTION (Prevent 404 for strings like "photo-1532...")
-    if (url.startsWith('photo-') && !url.includes('://')) {
-        return `https://images.unsplash.com/${url}?q=80&w=800&auto=format`;
+    if (trimmed.startsWith('photo-') && !trimmed.includes('://')) {
+        return `https://images.unsplash.com/${trimmed}?q=80&w=800&auto=format`;
     }
     
     // 2. GOOGLE DRIVE OPTIMIZATION (Support all common variants)
-    if (url.includes('drive.google.com') || url.includes('drive.usercontent.google.com') || url.includes('googleusercontent.com')) {
-        const idMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || 
-                        url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
-                        url.match(/\/d\/([a-zA-Z0-9_-]+)\//);
+    if (trimmed.includes('drive.google.com') || trimmed.includes('drive.usercontent.google.com') || trimmed.includes('googleusercontent.com')) {
+        const idMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || 
+                        trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+                        trimmed.match(/\/d\/([a-zA-Z0-9_-]+)\//);
         if (idMatch && idMatch[1]) return `https://lh3.googleusercontent.com/d/${idMatch[1]}`;
     }
     
     // 3. DROPBOX OPTIMIZATION
-    if (url.includes('dropbox.com')) {
-        if (url.includes('?dl=')) return url.replace(/\?dl=[01]/, '?raw=1');
-        if (!url.includes('raw=1')) return url + (url.includes('?') ? '&raw=1' : '?raw=1');
+    if (trimmed.includes('dropbox.com')) {
+        if (trimmed.includes('?dl=')) return trimmed.replace(/\?dl=[01]/, '?raw=1');
+        if (!trimmed.includes('raw=1')) return trimmed + (trimmed.includes('?') ? '&raw=1' : '?raw=1');
     }
 
     // 4. UNSPLASH OPTIMIZATION
-    if (url.includes('images.unsplash.com') && !url.includes('w=')) {
-        return `${url}${url.includes('?') ? '&' : '?'}q=80&w=800&auto=format`;
+    if (trimmed.includes('images.unsplash.com') && !trimmed.includes('w=')) {
+        return `${trimmed}${trimmed.includes('?') ? '&' : '?'}q=80&w=800&auto=format`;
     }
 
     // 5. SECURITY: Default to placeholder if not a valid URL
-    if (!url.startsWith('http') && !url.startsWith('data:')) {
+    if (!trimmed.startsWith('http') && !trimmed.startsWith('data:')) {
         return 'https://images.unsplash.com/photo-1600609842388-3e4b489d71c6?q=80&w=400';
     }
 
-    return url;
+    return trimmed;
   }
 }
 

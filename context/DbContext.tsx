@@ -1,6 +1,6 @@
 import React, { createContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { dbService } from '../services/db';
-import { supabase } from '../services/supabaseClient';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 // Verify Supabase client loaded
 if (!supabase) {
@@ -66,33 +66,51 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }, ...prev].slice(0, 50));
   }, []);
 
-  // 🔐 Secure token retrieval from localStorage
-  const getAuthToken = (): string => {
-    const authDataStr = localStorage.getItem('sb-huvblygddkflciwfnbcf-auth-token');
-
-    if (!authDataStr) {
-      throw new Error('No authentication token found. Please log in.');
-    }
-
-    try {
-      const authData = JSON.parse(authDataStr);
-      const token = authData?.access_token;
-
-      if (!token) {
-        throw new Error('Invalid authentication data. Please log in again.');
+  // 🔐 Secure token retrieval (FIXED)
+  const getAuthToken = async (): Promise<string> => {
+      try {
+          // Method 1: Get from Supabase client (RECOMMENDED)
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+              console.error('❌ Supabase session error:', error);
+              throw new Error('Authentication error. Please log in.');
+          }
+          
+          if (session && session.access_token) {
+              console.log('✅ Token retrieved from Supabase session');
+              return session.access_token;
+          }
+          
+          // Method 2: Fallback to localStorage (correct key format)
+          const storageKey = `sb-${SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`;
+          const authDataStr = localStorage.getItem(storageKey);
+          
+          if (authDataStr) {
+              try {
+                  const authData = JSON.parse(authDataStr);
+                  if (authData?.access_token) {
+                      console.log('✅ Token retrieved from localStorage');
+                      return authData.access_token;
+                  }
+              } catch (parseError) {
+                  console.warn('⚠️ Failed to parse localStorage token');
+              }
+          }
+          
+          // No token found
+          console.error('❌ No authentication token found');
+          throw new Error('No authentication token found. Please log in.');
+          
+      } catch (err: any) {
+          console.error('❌ getAuthToken error:', err);
+          throw new Error('Failed to retrieve authentication token. Please log in again.');
       }
-
-      return token;
-    } catch (err) {
-      throw new Error('Failed to parse authentication token. Please log in again.');
-    }
   };
 
   // 🔍 Direct HTTP GET - bypasses Supabase client deadlock
   const directGetSingle = async (tableName: string, id: string) => {
-    console.log('🔧 [DIRECT] Starting HTTP GET Single...');
-
-    const token = getAuthToken();
+    const token = await getAuthToken(); // ✅ Added await
     const url = `${SUPABASE_URL}/rest/v1/${tableName}?id=eq.${id}&select=*`;
 
     const response = await fetch(url, {
@@ -113,16 +131,10 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     return Array.isArray(data) ? data[0] : data;
   };
 
-  // 🔧 Direct HTTP UPDATE (PATCH) - bypasses Supabase client deadlock
   const directUpdate = async (tableName: string, id: string, updates: any) => {
-    console.log('🔧 [DIRECT] Starting HTTP PATCH...');
-    console.log('📦 [DIRECT] Table:', tableName);
-    console.log('🆔 [DIRECT] ID:', id);
-    
-    const token = getAuthToken();
+    const token = await getAuthToken(); // ✅ Added await
     const url = `${SUPABASE_URL}/rest/v1/${tableName}?id=eq.${id}`;
     
-    // We update first, then fetch to be robust against return=representation failures
     const response = await fetch(url, {
         method: 'PATCH',
         headers: {
@@ -135,26 +147,19 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     
     if (!response.ok) {
         const text = await response.text();
-        console.error('🚨 [DIRECT] Error response:', text);
         throw new Error(`HTTP PATCH ${response.status}: ${text}`);
     }
     
-    // Fetch updated row separately
     try {
       const data = await directGetSingle(tableName, id);
-      return [data]; // Return as array for consistency with verify checks
+      return [data];
     } catch (err) {
-      console.warn('⚠️ [DIRECT] Fetch after update failed, returning optimistic data');
       return [{ id, ...updates }];
     }
   };
 
-
-  // 🆕 Direct HTTP CREATE (POST) - bypasses Supabase client deadlock
   const directCreate = async (tableName: string, payload: any) => {
-    console.log('🔧 [DIRECT] Starting HTTP POST...');
-
-    const token = getAuthToken();
+    const token = await getAuthToken(); // ✅ Added await
     const url = `${SUPABASE_URL}/rest/v1/${tableName}`;
 
     const response = await fetch(url, {
@@ -170,7 +175,6 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     if (!response.ok) {
       const text = await response.text();
-      console.error('🚨 [DIRECT] Error response:', text);
       throw new Error(`HTTP ${response.status}: ${text}`);
     }
 
@@ -178,11 +182,8 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     return Array.isArray(data) ? data : [data];
   };
 
-  // 🗑️ Direct HTTP DELETE - bypasses Supabase client deadlock
   const directDelete = async (tableName: string, id: string) => {
-    console.log('🔧 [DIRECT] Starting HTTP DELETE...');
-
-    const token = getAuthToken();
+    const token = await getAuthToken(); // ✅ Added await
     const url = `${SUPABASE_URL}/rest/v1/${tableName}?id=eq.${id}`;
 
     const response = await fetch(url, {
@@ -196,18 +197,12 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     if (!response.ok) {
       const text = await response.text();
-      console.error('🚨 [DIRECT] Error response:', text);
       throw new Error(`HTTP ${response.status}: ${text}`);
     }
-
-    console.log('✅ [DIRECT] Delete success');
   };
 
-  // 🔍 Direct HTTP GET - bypasses Supabase client deadlock
   const directGet = async (tableName: string) => {
-    console.log('🔧 [DIRECT] Starting HTTP GET...');
-
-    const token = getAuthToken();
+    const token = await getAuthToken(); // ✅ Added await
     const url = `${SUPABASE_URL}/rest/v1/${tableName}?select=*`;
 
     const response = await fetch(url, {
@@ -221,7 +216,6 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     if (!response.ok) {
       const text = await response.text();
-      console.error('🚨 [DIRECT] Error response:', text);
       throw new Error(`HTTP ${response.status}: ${text}`);
     }
 
@@ -238,10 +232,10 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       setDb(prev => ({ ...prev, [tableName]: data || [] }));
       logEvent({ endpoint: tableName, method: 'GET', source: 'DB', status: 'success' });
     } catch (e) {
-      console.error('❌ [DB] Refresh failed:', e);
+      console.error(`❌ [DB] Refresh failed for ${tableName}:`, e);
       logEvent({ endpoint: tableName, method: 'GET', source: 'DB', status: 'error' });
     }
-  }, [logEvent, SUPABASE_URL, SUPABASE_ANON_KEY]);
+  }, [logEvent]);
 
   // Refresh all data
   const refresh = useCallback(async () => {
@@ -249,9 +243,29 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       const bundle = await dbService.getStartupBundle();
       if (bundle) setDb(bundle);
     } catch (e) {
-      console.warn('⚠️ [DB] Startup bundle failed, falling back to services table');
+      console.warn('⚠️ [DB] Startup bundle failed, falling back to basic tables');
       await refreshTable('services');
     }
+  }, [refreshTable]);
+
+  // Real-time Subscriptions for Payment Methods
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    const channel = supabase
+      .channel('db-realtime-payment-methods')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'payment_methods' }, 
+        () => {
+          console.log('🔄 [Realtime] Payment methods table updated. Syncing...');
+          refreshTable('payment_methods');
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, [refreshTable]);
 
   // Public API: UPDATE entry
@@ -266,11 +280,10 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       logEvent({ endpoint: `${tableName}/${id}`, method: 'PATCH', source: 'DB', status: 'success' });
       return data;
     } catch (err: any) {
-      console.error('💥 [DB] Update failed:', err);
       logEvent({ endpoint: `${tableName}/${id}`, method: 'PATCH', source: 'DB', status: 'error' });
       throw err;
     }
-  }, [logEvent, SUPABASE_URL, SUPABASE_ANON_KEY]);
+  }, [logEvent]);
 
   // Public API: CREATE entry
   const createEntry = useCallback(async (tableName: string, payload: any) => {
@@ -282,11 +295,10 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       logEvent({ endpoint: tableName, method: 'POST', source: 'DB', status: 'success' });
       return result;
     } catch (err: any) {
-      console.error('💥 [DB] Create failed:', err);
       logEvent({ endpoint: tableName, method: 'POST', source: 'DB', status: 'error' });
       throw err;
     }
-  }, [refreshTable, logEvent, SUPABASE_URL, SUPABASE_ANON_KEY]);
+  }, [refreshTable, logEvent]);
 
   // Public API: DELETE entry
   const deleteEntry = useCallback(async (tableName: string, id: string | number) => {
@@ -297,11 +309,10 @@ export const DbProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       await refreshTable(tableName);
       logEvent({ endpoint: `${tableName}/${id}`, method: 'DELETE', source: 'DB', status: 'success' });
     } catch (err: any) {
-      console.error('💥 [DB] Delete failed:', err);
       logEvent({ endpoint: `${tableName}/${id}`, method: 'DELETE', source: 'DB', status: 'error' });
       throw err;
     }
-  }, [refreshTable, logEvent, SUPABASE_URL, SUPABASE_ANON_KEY]);
+  }, [refreshTable, logEvent]);
 
   // Public API: Toggle status
   const toggleStatus = useCallback(async (tableName: string, id: string | number) => {

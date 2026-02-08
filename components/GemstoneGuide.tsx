@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 // @ts-ignore
 import { Link } from 'react-router-dom';
@@ -9,7 +8,7 @@ import Modal from './shared/Modal';
 import { useDb } from '../hooks/useDb';
 import { useTranslation } from '../hooks/useTranslation';
 import { usePayment } from '../context/PaymentContext';
-import { getGemstoneGuidance, generateMantraAudio } from '../services/geminiService';
+import { getGemstoneGuidance, generateMantraAudio } from '../services/aiService';
 import { SmartDatePicker } from './SmartAstroInputs';
 import FullReport from './FullReport';
 import { useAuth } from '../context/AuthContext';
@@ -333,4 +332,3 @@ const GemstoneGuide: React.FC = () => {
 };
 
 export default GemstoneGuide;
-

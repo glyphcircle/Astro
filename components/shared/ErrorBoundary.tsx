@@ -14,25 +14,28 @@ interface State {
 /**
  * Standard React Error Boundary component.
  */
-// Fix: Explicitly extend React.Component to ensure inherited properties like setState and props are correctly resolved by the compiler.
+// Explicitly using React.Component to ensure proper inheritance and access to standard members like setState, state, and props
 class ErrorBoundary extends React.Component<Props, State> {
-  /* Explicitly initialized state with State interface for better type inference */
   public state: State = {
     hasError: false,
     error: null,
   };
 
+  constructor(props: Props) {
+    super(props);
+  }
+
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  // Fix: Standard lifecycle method implementation
+  // Lifecycle method for side-effects when errors are caught
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("🌌 Cosmic Interruption Caught:", error, errorInfo);
   }
 
-  // Fix: Access setState via the inherited class member from React.Component
   public handleRetry = () => {
+    // Accessing setState from the base React.Component class
     this.setState({ hasError: false, error: null });
     window.location.reload(); 
   }
@@ -44,8 +47,8 @@ class ErrorBoundary extends React.Component<Props, State> {
       window.location.href = '/';
   }
 
-  // Fix: Access state and props via inherited members from React.Component
   public render(): ReactNode {
+    // Accessing state and props inherited from React.Component
     const { hasError, error } = this.state;
     const { children } = this.props;
 

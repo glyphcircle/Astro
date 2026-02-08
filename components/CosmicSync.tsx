@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 // @ts-ignore
 import { Link } from 'react-router-dom';
 import Card from './shared/Card';
 import Button from './shared/Button';
-import { getCosmicSync } from '../services/geminiService';
+import { getCosmicSync } from '../services/aiService';
 import { SmartDatePicker, SmartTimePicker, SmartCitySearch } from './SmartAstroInputs';
 import FullReport from './FullReport';
 import { usePayment } from '../context/PaymentContext';

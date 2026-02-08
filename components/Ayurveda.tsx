@@ -5,7 +5,7 @@ import Card from './shared/Card';
 import Button from './shared/Button';
 import ProgressBar from './shared/ProgressBar';
 import { useTranslation } from '../hooks/useTranslation';
-import { getAyurvedicAnalysis } from '../services/geminiService';
+import { getAyurvedicAnalysis } from '../services/aiService';
 import { usePayment } from '../context/PaymentContext';
 import FullReport from './FullReport';
 import { useAuth } from '../context/AuthContext';

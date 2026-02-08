@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Button from './shared/Button';
 import ProgressBar from './shared/ProgressBar';
 import { useTranslation } from '../hooks/useTranslation';
-import { analyzeDream, DreamAnalysisResponse } from '../services/geminiService';
+import { analyzeDream, DreamAnalysisResponse } from '../services/aiService';
 import { usePayment } from '../context/PaymentContext';
 import FullReport from './FullReport';
 import VoiceInput from './VoiceInput';
@@ -111,7 +111,7 @@ const DreamAnalysis: React.FC = () => {
                 </div>
 
                 <div className="min-h-[20rem] bg-black/20 rounded-lg border border-indigo-500/20 p-6 relative overflow-hidden flex flex-col">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl -z-10"></div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl -z-10 flex flex-col"></div>
                     {isLoading && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20">
                             <ProgressBar progress={progress} message="Decoding Symbols..." />

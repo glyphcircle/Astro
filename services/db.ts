@@ -128,12 +128,7 @@ export class SupabaseDatabase {
   }
 
   async updateEntry(table: string, id: string | number, updates: any) {
-    console.log('📡 [DB] PATCH START', { tableName: table, id, updatesKeys: Object.keys(updates) })
-
-    if (!supabase) {
-      console.error('❌ CRITICAL: supabase UNDEFINED')
-      throw new Error("Supabase missing");
-    }
+    if (!supabase) throw new Error("Supabase missing");
 
     ['image', 'image_url', 'logo_url'].forEach(field => {
       if (updates[field] && updates[field].length > 200) {
@@ -209,7 +204,7 @@ export class SupabaseDatabase {
   }
 
   /**
-   * Optimized Bundle Fetch using 13 specialized Views
+   * Optimized Bundle Fetch using specialised Views
    */
   async getStartupBundle() {
     try {
@@ -226,7 +221,7 @@ export class SupabaseDatabase {
       return {
         services: servicesRes.data || [],
         config: configRes.data || [],
-        payment_providers: providersRes.data || [],
+        payment_methods: providersRes.data || [], // Use the clear mapping name
         store_items: itemsRes.data || [],
         image_assets: assetsRes.data || [],
         report_formats: formatsRes.data || [],
@@ -282,9 +277,7 @@ export class SupabaseDatabase {
       return { data, error: null };
     } catch (err: any) {
       console.error('💥 [DB] Save Reading ERROR:', err.message)
-      const fallbackKey = `reading_fallback_${Date.now()}`
-      localStorage.setItem(fallbackKey, JSON.stringify(readingData))
-      return { data: { ...readingData, id: fallbackKey }, error: err };
+      return { data: { ...readingData, id: `fb_${Date.now()}` }, error: err };
     }
   }
 

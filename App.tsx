@@ -16,6 +16,7 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminConfig from './components/AdminConfig';
 import AdminCloudConfig from './components/AdminCloudConfig';
 import AdminPaymentConfig from './components/AdminPaymentConfig';
+import AdminPaymentSettings from './pages/AdminPaymentSettings';
 import AdminDB from './components/AdminDB';
 import AdminBatchEditor from './components/AdminBatchEditor';
 import MasterLogin from './components/MasterLogin';
@@ -41,6 +42,7 @@ import ReportTemplateManager from './components/ReportTemplateManager';
 
 // Context and Provider imports
 import { useAuth } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import { PushNotifications } from './components/PushNotifications';
 import DailyReminder from './components/DailyReminder';
 import BadgeCounter from './components/BadgeCounter';
@@ -69,7 +71,7 @@ const IdleCursor: React.FC = () => {
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => setIsIdle(true), 3000);
     };
-    
+
     const handleClick = () => setIsIdle(false);
 
     window.addEventListener('mousemove', handleMove);
@@ -88,7 +90,7 @@ const IdleCursor: React.FC = () => {
 
   return (
     <div
-      className="fixed pointer-events-none z-[9999] select-none animate-pulse-glow"       
+      className="fixed pointer-events-none z-[9999] select-none animate-pulse-glow"
       style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -50%)', cursor: 'none' }}
     >
       <span className="text-5xl text-amber-400 font-bold drop-shadow-[0_0_20px_rgba(245,158,11,0.9)] select-none">
@@ -100,7 +102,7 @@ const IdleCursor: React.FC = () => {
 };
 
 // Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {       
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -125,83 +127,82 @@ function AppRoutes() {
   const showLayout = isAuthenticated && !isAuthPage && !isAdminPage;
 
   return (
-    <div className="bg-skin-base min-h-screen text-skin-text flex flex-col font-lora overflow-x-hidden transition-colors duration-500">
-      <IdleCursor />
+    <CartProvider>
+      <div className="bg-skin-base min-h-screen text-skin-text flex flex-col font-lora overflow-x-hidden transition-colors duration-500">
+        <IdleCursor />
 
-      {showLayout && <Header onLogout={logout} isMobile={isMobile} />}
+        {showLayout && <Header onLogout={logout} isMobile={isMobile} />}
 
-      {isAuthenticated && (
-        <>
-          <DailyReminder />
-          {!isMobile && <BadgeCounter />}
-          <LargeTextMode />
-          {isAdminVerified && <ContextDbNavigator />}
-          {isAdminVerified && <ABTestStatus />}
-          {!isAdminPage && <GamificationHUD />}
-          {!isAdminPage && !isMobile && (
-            <Link to="/referrals" className="fixed bottom-6 left-6 z-40 animate-pulse-glow group">
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-700 rounded-full shadow-[0_0_20px_rgba(34,197,94,0.4)] flex items-center justify-center border-2 border-white/20 transform group-hover:scale-110 transition-transform">
-                <span className="text-2xl">🎁</span>
-              </div>
-            </Link>
-          )}
-        </>
-      )}
+        {isAuthenticated && (
+          <>
+            <DailyReminder />
+            {!isMobile && <BadgeCounter />}
+            <LargeTextMode />
+            {isAdminVerified && <ContextDbNavigator />}
+            {isAdminVerified && <ABTestStatus />}
+            {!isAdminPage && <GamificationHUD />}
+            {!isAdminPage && !isMobile && (
+              <Link to="/referrals" className="fixed bottom-6 left-6 z-40 animate-pulse-glow group">
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-700 rounded-full shadow-[0_0_20px_rgba(34,197,94,0.4)] flex items-center justify-center border-2 border-white/20 transform group-hover:scale-110 transition-transform">
+                  <span className="text-2xl">🎁</span>
+                </div>
+              </Link>
+            )}
+          </>
+        )}
 
-      <main className={`flex-grow ${showLayout ? `container mx-auto px-4 ${isMobile ? 'pb-24 pt-4' : 'py-8'}` : ''}`}>
-        {location.pathname === '/home' && isAuthenticated && <PanchangBar />}
+        <main className={`flex-grow ${showLayout ? `container mx-auto px-4 ${isMobile ? 'pb-24 pt-4' : 'py-8'}` : ''}`}>
+          {location.pathname === '/home' && isAuthenticated && <PanchangBar />}
 
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/login" replace />} />
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/home" /> : <Login />} />
-          <Route path="/register" element={isAuthenticated ? <Navigate to="/home" /> : <Register />} />
-          <Route path="/master-login" element={<MasterLogin />} />
+          <Routes>
+            <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/login" replace />} />
+            <Route path="/login" element={isAuthenticated ? <Navigate to="/home" /> : <Login />} />
+            <Route path="/register" element={isAuthenticated ? <Navigate to="/home" /> : <Register />} />
+            <Route path="/master-login" element={<MasterLogin />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
-          <Route path="/admin/config" element={<AdminGuard><AdminConfig /></AdminGuard>} />
-          <Route path="/admin/cloud" element={<AdminGuard><AdminCloudConfig /></AdminGuard>} />
-          <Route path="/admin/payments" element={<AdminGuard><AdminPaymentConfig /></AdminGuard>} />
-          <Route path="/admin/revenue" element={<AdminGuard><RevenueDashboard /></AdminGuard>} />
-          <Route path="/admin/db/:table" element={<AdminGuard><AdminDB /></AdminGuard>} />
-          <Route path="/admin/batch-editor" element={<AdminGuard><AdminBatchEditor /></AdminGuard>} />
-          <Route path="/admin/backup" element={<AdminGuard><BackupManager /></AdminGuard>} />
-          <Route path="/admin/report-designer" element={<AdminGuard><ReportDesigner /></AdminGuard>} />
+            <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+            <Route path="/admin/config" element={<AdminGuard><AdminConfig /></AdminGuard>} />
+            <Route path="/admin/cloud" element={<AdminGuard><AdminCloudConfig /></AdminGuard>} />
+            <Route path="/admin/payments" element={<AdminGuard><AdminPaymentConfig /></AdminGuard>} />
+            <Route path="/admin/payment-settings" element={<AdminGuard><AdminPaymentSettings /></AdminGuard>} />
+            <Route path="/admin/revenue" element={<AdminGuard><RevenueDashboard /></AdminGuard>} />
+            <Route path="/admin/db/:table" element={<AdminGuard><AdminDB /></AdminGuard>} />
+            <Route path="/admin/batch-editor" element={<AdminGuard><AdminBatchEditor /></AdminGuard>} />
+            <Route path="/admin/backup" element={<AdminGuard><BackupManager /></AdminGuard>} />
+            <Route path="/admin/report-designer" element={<AdminGuard><ReportDesigner /></AdminGuard>} />
+            <Route path="/admin/report-templates" element={<AdminGuard><ReportTemplateManager /></AdminGuard>} />
 
-          {/* Protected User Routes */}
-          <Route path="/home" element={<ProtectedRoute><ErrorBoundary><Home /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/history" element={<ProtectedRoute><ErrorBoundary><ReadingHistory /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/palmistry" element={<ProtectedRoute><ErrorBoundary><Palmistry /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/numerology" element={<ProtectedRoute><ErrorBoundary><NumerologyAstrology mode="numerology" /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/astrology" element={<ProtectedRoute><ErrorBoundary><NumerologyAstrology mode="astrology" /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/tarot" element={<ProtectedRoute><ErrorBoundary><Tarot /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/face-reading" element={<ProtectedRoute><ErrorBoundary><FaceReading /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/dream-analysis" element={<ProtectedRoute><ErrorBoundary><DreamAnalysis /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/matchmaking" element={<ProtectedRoute><ErrorBoundary><Matchmaking /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/remedy" element={<ProtectedRoute><ErrorBoundary><Remedy /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/store" element={<ProtectedRoute><ErrorBoundary><Store /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/gemstones" element={<ProtectedRoute><ErrorBoundary><GemstoneGuide /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/referrals" element={<ProtectedRoute><ReferralProgram /></ProtectedRoute>} />
-          <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
-          <Route path="/achievements" element={<ProtectedRoute><ErrorBoundary><SigilGallery /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/ayurveda" element={<ProtectedRoute><ErrorBoundary><Ayurveda /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/moon-journal" element={<ProtectedRoute><ErrorBoundary><MoonJournal /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/muhurat" element={<ProtectedRoute><ErrorBoundary><MuhuratPicker /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/cosmic-sync" element={<ProtectedRoute><ErrorBoundary><CosmicSync /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/voice-oracle" element={<ProtectedRoute><ErrorBoundary><VoiceOracle /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/calendar" element={<ProtectedRoute><ErrorBoundary><KalnirnayeCalendar /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/admin/report-templates" element={<AdminGuard><ReportTemplateManager /></AdminGuard>} />
-          <Route path="/coming-soon" element={<ComingSoon />} />
+            <Route path="/home" element={<ProtectedRoute><ErrorBoundary><Home /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/history" element={<ProtectedRoute><ErrorBoundary><ReadingHistory /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/palmistry" element={<ProtectedRoute><ErrorBoundary><Palmistry /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/numerology" element={<ProtectedRoute><ErrorBoundary><NumerologyAstrology mode="numerology" /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/astrology" element={<ProtectedRoute><ErrorBoundary><NumerologyAstrology mode="astrology" /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/tarot" element={<ProtectedRoute><ErrorBoundary><Tarot /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/face-reading" element={<ProtectedRoute><ErrorBoundary><FaceReading /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/dream-analysis" element={<ProtectedRoute><ErrorBoundary><DreamAnalysis /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/matchmaking" element={<ProtectedRoute><ErrorBoundary><Matchmaking /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/remedy" element={<ProtectedRoute><ErrorBoundary><Remedy /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/store" element={<ProtectedRoute><ErrorBoundary><Store /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/gemstones" element={<ProtectedRoute><ErrorBoundary><GemstoneGuide /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/referrals" element={<ProtectedRoute><ReferralProgram /></ProtectedRoute>} />
+            <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+            <Route path="/achievements" element={<ProtectedRoute><ErrorBoundary><SigilGallery /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/ayurveda" element={<ProtectedRoute><ErrorBoundary><Ayurveda /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/moon-journal" element={<ProtectedRoute><ErrorBoundary><MoonJournal /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/muhurat" element={<ProtectedRoute><ErrorBoundary><MuhuratPicker /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/cosmic-sync" element={<ProtectedRoute><ErrorBoundary><CosmicSync /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/voice-oracle" element={<ProtectedRoute><ErrorBoundary><VoiceOracle /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><ErrorBoundary><KalnirnayeCalendar /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/coming-soon" element={<ComingSoon />} />
 
-          {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/login" />} />
-        </Routes>
-      </main>
+            <Route path="*" element={<Navigate to="/login" />} />
+          </Routes>
+        </main>
 
-      {showLayout && isMobile && <MobileNavBar />}
-      {showLayout && !isMobile && <Footer />}
-    </div>
+        {showLayout && isMobile && <MobileNavBar />}
+        {showLayout && !isMobile && <Footer />}
+      </div>
+    </CartProvider>
   );
 }
 

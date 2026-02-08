@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { cloudManager } from '../../services/cloudManager';
 
@@ -24,7 +23,6 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const defaultFallback = "https://images.unsplash.com/photo-1600609842388-3e4b489d71c6?q=80&w=200";
 
   // --- OPTIMIZATION: Memoize Cloud URL resolution ---
-  // This prevents regex parsing inside cloudManager on every render cycle
   const finalSrc = useMemo(() => {
       if (hasError) return fallbackSrc || defaultFallback;
       return cloudManager.resolveImage(src);
@@ -43,13 +41,11 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
       
       {/* Image */}
       <img
-        src={finalSrc}
+        src={finalSrc || defaultFallback}
         alt={alt || 'Visual content'}
         loading="lazy"
-        crossOrigin="anonymous" 
         onLoad={() => setIsLoaded(true)}
         onError={() => { 
-            // Avoid infinite loops if fallback also fails
             if (!hasError) {
                 setHasError(true); 
                 setIsLoaded(true); 

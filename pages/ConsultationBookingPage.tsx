@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePayment } from '../context/PaymentContext';
 import SmartBackButton from '../components/shared/SmartBackButton';
 import Button from '../components/shared/Button';
-import { processConsultationBooking } from '../services/geminiService';
+import { processConsultationBooking } from '../services/aiService';
 import Card from '../components/shared/Card';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
@@ -107,7 +107,7 @@ const ConsultationBookingPage: React.FC = () => {
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="text-center">
             <div className="inline-block p-4 bg-green-500 rounded-full mb-4 shadow-lg">
-              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </div>
             <h1 className={`text-4xl font-cinzel font-black uppercase mb-2 ${isLight ? 'text-amber-900' : 'text-amber-400'}`}>Booking Confirmed</h1>
             <p className="font-mono text-sm opacity-60">ID: {consultationResult.confirmationId}</p>
