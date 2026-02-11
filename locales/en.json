@@ -108,5 +108,48 @@
   "guidancePrompt": "Share your worries or questions to receive personalized Vedic remedies and spiritual guidance.",
   "describeConcern": "Describe your concern or question...",
   "getGuidance": "Get Spiritual Guidance",
-  "guidancePlaceholder": "Your guidance will appear here."
+  "guidancePlaceholder": "Your guidance will appear here.",
+} 
+
+{
+  "ayurveda": {
+    "title": "Ayurvedic Wisdom",
+    "subtitle": "Discover your Prakriti (Nature)",
+    "constitution": "Dominant Constitution",
+    "balanced": "Balanced",
+    "vata": "Vata (Air)",
+    "pitta": "Pitta (Fire)",
+    "kapha": "Kapha (Earth)",
+    "dietaryRecommendations": "Dietary Recommendations",
+    "unlockMessage": "🔒 Unlock full report for recipes & lifestyle plan",
+    "unlockButton": "🔓 Unlock Full Health Report",
+    "analyzingMessage": "Analyzing Constitution...",
+    "questions": {
+      "bodyFrame": "Body Frame",
+      "skinTexture": "Skin Texture",
+      "energyLevel": "Energy Level",
+      "sleepPattern": "Sleep Pattern",
+      "digestion": "Digestion"
+    },
+    "options": {
+      "thinLean": "Thin/Lean (Vata)",
+      "mediumMuscular": "Medium/Muscular (Pitta)",
+      "heavyBroad": "Heavy/Broad (Kapha)",
+      "dryRough": "Dry/Rough",
+      "warmOily": "Warm/Oily",
+      "thickCool": "Thick/Cool",
+      "variableBursts": "Variable/Bursts",
+      "moderateFocused": "Moderate/Focused",
+      "steadySlow": "Steady/Slow",
+      "lightInterrupted": "Light/Interrupted",
+      "soundShort": "Sound/Short",
+      "deepHeavy": "Deep/Heavy",
+      "irregularGassy": "Irregular/Gassy",
+      "strongIntense": "Strong/Intense",
+      "slowHeavy": "Slow/Heavy"
+    },
+    "defaultReading": "Your Ayurvedic profile is balanced. Continue with healthy lifestyle practices.",
+    "errorReading": "Unable to generate full analysis. Please try again or consult an Ayurvedic practitioner.",
+    "questionProgress": "Question {{current}} of {{total}}"
+  }
 }

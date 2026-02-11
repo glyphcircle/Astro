@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:https": "cross-env VITE_HTTPS=true vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "predeploy": "npm run build",

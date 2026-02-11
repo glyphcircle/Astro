@@ -9,6 +9,7 @@ import Register from './components/Register';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Remedy from './components/Remedy';
+import TransactionHistory from './components/TransactionHistory';
 import FaceReading from './components/FaceReading';
 import DreamAnalysis from './components/DreamAnalysis';
 import Matchmaking from './components/Matchmaking';
@@ -39,7 +40,8 @@ import ReportDesigner from './components/ReportDesigner';
 import KalnirnayeCalendar from './components/KalnirnayeCalendar';
 import ComingSoon from './components/ComingSoon';
 import ReportTemplateManager from './components/ReportTemplateManager';
-
+import OrderConfirmation from './components/OrderConfirmation';
+import PersonalGuidance from './components/PersonalGuidance';
 // Context and Provider imports
 import { useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -159,7 +161,7 @@ function AppRoutes() {
             <Route path="/login" element={isAuthenticated ? <Navigate to="/home" /> : <Login />} />
             <Route path="/register" element={isAuthenticated ? <Navigate to="/home" /> : <Register />} />
             <Route path="/master-login" element={<MasterLogin />} />
-
+            <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
             <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
             <Route path="/admin/config" element={<AdminGuard><AdminConfig /></AdminGuard>} />
             <Route path="/admin/cloud" element={<AdminGuard><AdminCloudConfig /></AdminGuard>} />
@@ -171,7 +173,7 @@ function AppRoutes() {
             <Route path="/admin/backup" element={<AdminGuard><BackupManager /></AdminGuard>} />
             <Route path="/admin/report-designer" element={<AdminGuard><ReportDesigner /></AdminGuard>} />
             <Route path="/admin/report-templates" element={<AdminGuard><ReportTemplateManager /></AdminGuard>} />
-
+            <Route path="/transactions" element={<TransactionHistory />} />
             <Route path="/home" element={<ProtectedRoute><ErrorBoundary><Home /></ErrorBoundary></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><ErrorBoundary><ReadingHistory /></ErrorBoundary></ProtectedRoute>} />
             <Route path="/palmistry" element={<ProtectedRoute><ErrorBoundary><Palmistry /></ErrorBoundary></ProtectedRoute>} />
@@ -186,6 +188,7 @@ function AppRoutes() {
             <Route path="/gemstones" element={<ProtectedRoute><ErrorBoundary><GemstoneGuide /></ErrorBoundary></ProtectedRoute>} />
             <Route path="/referrals" element={<ProtectedRoute><ReferralProgram /></ProtectedRoute>} />
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+            <Route path="/personal-guidance" element={<PersonalGuidance />} />
             <Route path="/achievements" element={<ProtectedRoute><ErrorBoundary><SigilGallery /></ErrorBoundary></ProtectedRoute>} />
             <Route path="/ayurveda" element={<ProtectedRoute><ErrorBoundary><Ayurveda /></ErrorBoundary></ProtectedRoute>} />
             <Route path="/moon-journal" element={<ProtectedRoute><ErrorBoundary><MoonJournal /></ErrorBoundary></ProtectedRoute>} />

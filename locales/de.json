@@ -99,5 +99,48 @@
   "create": "Erstellen",
   "featureComingSoon": "{featureName} kommt bald.",
   "stayTuned": "Bleib dran für mystische Einblicke!",
-  "goBackHome": "Zurück zur Startseite"
+  "goBackHome": "Zurück zur Startseite",
+}
+
+{
+  "ayurveda": {
+    "title": "Ayurvedische Weisheit",
+    "subtitle": "Entdecken Sie Ihre Prakriti (Natur)",
+    "constitution": "Dominante Konstitution",
+    "balanced": "Ausgeglichen",
+    "vata": "Vata (Luft)",
+    "pitta": "Pitta (Feuer)",
+    "kapha": "Kapha (Erde)",
+    "dietaryRecommendations": "Ernährungsempfehlungen",
+    "unlockMessage": "🔒 Vollständigen Bericht für Rezepte und Lifestyle-Plan freischalten",
+    "unlockButton": "🔓 Vollständigen Gesundheitsbericht Freischalten",
+    "analyzingMessage": "Konstitution wird analysiert...",
+    "questions": {
+      "bodyFrame": "Körperbau",
+      "skinTexture": "Hauttextur",
+      "energyLevel": "Energieniveau",
+      "sleepPattern": "Schlafmuster",
+      "digestion": "Verdauung"
+    },
+    "options": {
+      "thinLean": "Dünn/Schlank (Vata)",
+      "mediumMuscular": "Mittel/Muskulös (Pitta)",
+      "heavyBroad": "Schwer/Breit (Kapha)",
+      "dryRough": "Trocken/Rau",
+      "warmOily": "Warm/Ölig",
+      "thickCool": "Dick/Kühl",
+      "variableBursts": "Variabel/Schübe",
+      "moderateFocused": "Moderat/Fokussiert",
+      "steadySlow": "Stetig/Langsam",
+      "lightInterrupted": "Leicht/Unterbrochen",
+      "soundShort": "Tief/Kurz",
+      "deepHeavy": "Tief/Schwer",
+      "irregularGassy": "Unregelmäßig/Blähend",
+      "strongIntense": "Stark/Intensiv",
+      "slowHeavy": "Langsam/Schwer"
+    },
+    "defaultReading": "Ihr ayurvedisches Profil ist ausgeglichen. Setzen Sie gesunde Lebenspraktiken fort.",
+    "errorReading": "Vollständige Analyse konnte nicht erstellt werden. Bitte versuchen Sie es erneut oder konsultieren Sie einen ayurvedischen Arzt.",
+    "questionProgress": "Frage {{current}} von {{total}}"
+  }
 }

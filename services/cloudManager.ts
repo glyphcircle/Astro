@@ -51,8 +51,8 @@ class CloudManager {
     else if (url.includes('cloudinary')) detectedProvider = 'Cloudinary';
 
     if (detectedProvider) {
-        const isActive = providers.some(p => p.provider === detectedProvider && p.status === 'active' && p.is_active);
-        if (!isActive) return { valid: false, message: `⚠️ Missing configuration for ${detectedProvider}.` };
+      const isActive = providers.some(p => p.provider === detectedProvider && p.status === 'active' && p.is_active);
+      if (!isActive) return { valid: false, message: `⚠️ Missing configuration for ${detectedProvider}.` };
     }
     return { valid: true };
   }
@@ -62,42 +62,61 @@ class CloudManager {
     return this.resolveImage(fallbackUrl);
   }
 
+  /**
+   * Enhanced resolveImage with proper Google Drive thumbnail support
+   */
   public resolveImage(url: string | undefined | null): string {
     if (!url || typeof url !== 'string') return '';
     const trimmed = url.trim();
     if (!trimmed) return '';
-    
-    // 1. RAW ID DETECTION (Prevent 404 for strings like "photo-1532...")
+
+    // 1. RAW ID DETECTION (Unsplash photo IDs)
     if (trimmed.startsWith('photo-') && !trimmed.includes('://')) {
-        return `https://images.unsplash.com/${trimmed}?q=80&w=800&auto=format`;
+      return `https://images.unsplash.com/${trimmed}?q=80&w=800&auto=format`;
     }
-    
-    // 2. GOOGLE DRIVE OPTIMIZATION (Support all common variants)
+
+    // 2. GOOGLE DRIVE - Use thumbnail API (bypasses CORS!)
     if (trimmed.includes('drive.google.com') || trimmed.includes('drive.usercontent.google.com') || trimmed.includes('googleusercontent.com')) {
-        const idMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || 
-                        trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
-                        trimmed.match(/\/d\/([a-zA-Z0-9_-]+)\//);
-        if (idMatch && idMatch[1]) return `https://lh3.googleusercontent.com/d/${idMatch[1]}`;
+      
+      // If already using lh3.googleusercontent.com, return as is
+      if (trimmed.includes('lh3.googleusercontent.com/d/')) {
+        return trimmed;
+      }
+
+      // Extract file ID from various formats
+      const idMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                     trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+                     trimmed.match(/\/d\/([a-zA-Z0-9_-]+)\//);
+      
+      if (idMatch && idMatch[1]) {
+        const fileId = idMatch[1];
+        console.log('🔄 Converting Google Drive to thumbnail, ID:', fileId);
+        
+        // Use Google's thumbnail service - works in IMG tags!
+        return `https://lh3.googleusercontent.com/d/${fileId}=w800-h600-p-k-no-nd-mv`;
+      }
     }
-    
+
     // 3. DROPBOX OPTIMIZATION
     if (trimmed.includes('dropbox.com')) {
-        if (trimmed.includes('?dl=')) return trimmed.replace(/\?dl=[01]/, '?raw=1');
-        if (!trimmed.includes('raw=1')) return trimmed + (trimmed.includes('?') ? '&raw=1' : '?raw=1');
+      if (trimmed.includes('?dl=')) return trimmed.replace(/\?dl=[01]/, '?raw=1');
+      if (!trimmed.includes('raw=1')) return trimmed + (trimmed.includes('?') ? '&raw=1' : '?raw=1');
     }
 
     // 4. UNSPLASH OPTIMIZATION
     if (trimmed.includes('images.unsplash.com') && !trimmed.includes('w=')) {
-        return `${trimmed}${trimmed.includes('?') ? '&' : '?'}q=80&w=800&auto=format`;
+      return `${trimmed}${trimmed.includes('?') ? '&' : '?'}q=80&w=800&auto=format`;
     }
 
     // 5. SECURITY: Default to placeholder if not a valid URL
     if (!trimmed.startsWith('http') && !trimmed.startsWith('data:')) {
-        return 'https://images.unsplash.com/photo-1600609842388-3e4b489d71c6?q=80&w=400';
+      console.warn('⚠️ Invalid image URL, using placeholder:', trimmed);
+      return 'https://images.unsplash.com/photo-1600609842388-3e4b489d71c6?q=80&w=400';
     }
 
     return trimmed;
   }
 }
 
+// Export single instance
 export const cloudManager = new CloudManager();

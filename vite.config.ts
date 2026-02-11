@@ -10,13 +10,23 @@ const __dirname = dirname(__filename);
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Fix: Cast process to any to ensure access to cwd() if the environment's Process type is incomplete
   const env = loadEnv(mode, (process as any).cwd(), '');
   const apiKey = env.API_KEY || '';
+
+  // Check if we want HTTPS (for localhost only)
+  const useHttps = process.env.VITE_HTTPS === 'true';
 
   return {
     plugins: [react()],
     base: './', 
+    
+    server: {
+      // ✅ FIX: Use undefined instead of false when HTTPS is disabled to avoid type mismatch with ServerOptions
+      https: useHttps ? {} : undefined,
+      port: 5173,
+      host: '0.0.0.0', // Listen on all interfaces
+      strictPort: true,
+    },
     
     resolve: {
       alias: {

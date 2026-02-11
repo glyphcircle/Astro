@@ -81,7 +81,7 @@ const ServiceResult: React.FC<ServiceResultProps> = ({
           
           {/* Left: Visual Side - Image/Icon */}
           <div className="flex justify-center">
-            <div className={`w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden transition-all ${
+            <div className={`w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden transition-all duration-700 transform hover:scale-105 ${
               isLight 
                 ? 'shadow-2xl shadow-amber-300/50 ring-4 ring-amber-200' 
                 : 'shadow-2xl shadow-amber-500/30 ring-4 ring-amber-900/50'
@@ -134,24 +134,26 @@ const ServiceResult: React.FC<ServiceResultProps> = ({
             </div>
 
             {/* Preview Text - Formatted as Bullet Points */}
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pr-2">
               {previewPoints.map((point, idx) => (
                 <div
                   key={idx}
-                  className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
-                    isLight ? 'bg-gray-50' : 'bg-gray-800/50'
+                  className={`group flex items-start gap-3 p-5 rounded-2xl transition-all duration-500 transform cursor-default hover:scale-[1.03] hover:shadow-xl ${
+                    isLight 
+                      ? 'bg-gray-50 border border-transparent hover:border-amber-200 hover:bg-white hover:shadow-md' 
+                      : 'bg-gray-800/40 border border-transparent hover:border-amber-500/30 hover:bg-gray-800 hover:shadow-[0_0_20px_rgba(245,158,11,0.1)]'
                   }`}
                 >
-                  <span className={`text-xl flex-shrink-0 ${
-                    point.type === 'positive' ? 'text-green-600' :
-                    point.type === 'negative' ? 'text-red-600' :
+                  <span className={`text-2xl flex-shrink-0 transition-transform duration-500 group-hover:scale-125 ${
+                    point.type === 'positive' ? 'text-green-500' :
+                    point.type === 'negative' ? 'text-red-500' :
                     isLight ? 'text-amber-700' : 'text-amber-400'
                   }`}>
                     {point.type === 'positive' ? '✨' : 
                      point.type === 'negative' ? '⚠️' : '🔮'}
                   </span>
-                  <p className={`text-sm leading-relaxed ${
-                    isLight ? 'text-gray-700' : 'text-gray-300'
+                  <p className={`text-sm leading-relaxed transition-colors duration-500 ${
+                    isLight ? 'text-gray-700 group-hover:text-amber-900' : 'text-gray-300 group-hover:text-amber-200'
                   }`}>
                     {point.text}
                   </p>
@@ -169,26 +171,24 @@ const ServiceResult: React.FC<ServiceResultProps> = ({
             {/* CTA Button */}
             <Button
               onClick={onRevealReport}
-              className={`w-full py-4 text-xl font-bold tracking-wide transition-all duration-300 ${
+              className={`w-full py-5 text-lg font-cinzel font-black tracking-widest transition-all duration-500 active:scale-95 ${
                 isLight
-                  ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
-                  : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-gray-900 shadow-lg hover:shadow-amber-500/50 hover:scale-[1.02]'
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white shadow-xl hover:shadow-2xl'
+                  : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-black shadow-xl hover:shadow-amber-500/40'
               }`}
             >
-              REVEAL COMPLETE REPORT
+              MANIFEST FULL DECREE
             </Button>
 
             {/* Admin Bypass Button */}
             {isAdmin && onAdminBypass && (
               <button
                 onClick={onAdminBypass}
-                className={`w-full py-3 text-sm font-medium transition-all rounded-lg ${
-                  isLight
-                    ? 'bg-purple-100 hover:bg-purple-200 text-purple-900'
-                    : 'bg-purple-900/50 hover:bg-purple-800/50 text-purple-300'
+                className={`w-full py-2 text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity ${
+                  isLight ? 'text-purple-900' : 'text-purple-400'
                 }`}
               >
-                👑 Admin Direct Access
+                👑 Sovereign Direct Access
               </button>
             )}
           </div>

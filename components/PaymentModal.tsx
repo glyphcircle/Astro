@@ -31,7 +31,7 @@ interface PaymentModalProps {
   isVisible: boolean;
   onClose: () => void;
   onSuccess: (details?: any) => void | Promise<void>;
-  basePrice: number; 
+  basePrice: number;
   serviceName: string;
 }
 
@@ -47,6 +47,8 @@ const LOCAL_UPI_LOGOS: Record<string, string> = {
 };
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSuccess, basePrice, serviceName }) => {
+  console.log('🎨 [PaymentModal] Rendering - isVisible:', isVisible);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [activeProvider, setActiveProvider] = useState<PaymentProvider | null>(null);
@@ -55,17 +57,15 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
   const [showQrCode, setShowQrCode] = useState(false);
   const [transactionId, setTransactionId] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  // Added toast state to fix 'showToast' error
   const [toast, setToast] = useState<string | null>(null);
 
   const { t, getRegionalPrice, currency, setCurrency } = useTranslation();
   const { user, pendingReading, commitPendingReading, refreshUser } = useAuth();
   const { db } = useDb();
   const { theme } = useTheme();
-  
+
   const isLight = theme.mode === 'light';
 
-  // Define showToast helper function
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -104,8 +104,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
       const region = paymentManager.detectUserCountry();
       const provider = paymentManager.getActiveProviderFromList(providersList, region);
       setActiveProvider(provider);
-      
-      // Auto-select first method
+
       if (activeMethods.length > 0) setSelectedMethod(activeMethods[0]);
     }
   }, [isVisible, db.payment_providers, user, currency, setCurrency, activeMethods]);
@@ -126,7 +125,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
     setTimeout(() => {
       if (pendingReading && user) commitPendingReading();
       refreshUser();
-      onClose(); 
+      onClose();
     }, 2000);
   };
 
@@ -152,7 +151,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
 
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substr(2, 9);
-    
+
     const paymentDetails = {
       method: specificMethod || selectedMethod?.name || 'test',
       provider: activeProvider?.provider_type || 'manual',
@@ -163,49 +162,40 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
       timestamp: new Date().toISOString()
     };
 
-    // If Razorpay is selected as the primary gateway
     if (activeProvider?.provider_type === 'razorpay' && !activeProvider.api_key.includes('12345678')) {
-        const options = {
-            key: activeProvider.api_key,
-            amount: Math.round(priceDisplay.price * 100), 
-            currency: currency, 
-            name: "Glyph Circle",
-            description: serviceName,
-            handler: (res: any) => {
-              const razorpayDetails = {
-                ...paymentDetails,
-                razorpay_payment_id: res.razorpay_payment_id,
-                razorpay_order_id: res.razorpay_order_id,
-                razorpay_signature: res.razorpay_signature
-              };
-              handlePaymentSuccess(razorpayDetails);
-            },
-            prefill: { name: user?.name, email: user?.email },
-            theme: { color: isLight ? "#92400e" : "#F59E0B" },
-            modal: { ondismiss: () => { setIsLoading(false); } }
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.open();
+      const options = {
+        key: activeProvider.api_key,
+        amount: Math.round(priceDisplay.price * 100),
+        currency: currency,
+        name: "Glyph Circle",
+        description: serviceName,
+        handler: (res: any) => {
+          const razorpayDetails = {
+            ...paymentDetails,
+            razorpay_payment_id: res.razorpay_payment_id,
+            razorpay_order_id: res.razorpay_order_id,
+            razorpay_signature: res.razorpay_signature
+          };
+          handlePaymentSuccess(razorpayDetails);
+        },
+        prefill: { name: user?.name, email: user?.email },
+        theme: { color: isLight ? "#92400e" : "#F59E0B" },
+        modal: { ondismiss: () => { setIsLoading(false); } }
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.open();
     } else {
-        // Fallback for Manual/Demo flow
-        setTimeout(() => handlePaymentSuccess(paymentDetails), 1500);
+      setTimeout(() => handlePaymentSuccess(paymentDetails), 1500);
     }
   };
 
   if (!isVisible) return null;
 
   return (
-    <div className={`fixed inset-0 backdrop-blur-2xl z-[100] flex items-center justify-center p-4 transition-all duration-700 ${
-      isLight ? 'bg-amber-50/80' : 'bg-black/90'
-    }`}>
-      <div 
-        className={`w-full max-w-2xl rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.5)] overflow-hidden relative min-h-[550px] flex flex-col border-2 transition-all duration-500 animate-fade-in-up ${
-          isLight ? 'bg-white border-amber-200' : 'bg-[#0b0c15] border-white/5'
-        }`}
-      >
+    <div className={`fixed inset-0 backdrop-blur-2xl z-[200] flex items-center justify-center p-4 transition-all duration-700 ${isLight ? 'bg-amber-50/80' : 'bg-black/90'}`}>
+      <div className={`w-full max-w-2xl rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.5)] overflow-hidden relative min-h-[550px] flex flex-col border-2 transition-all duration-500 animate-fade-in-up ${isLight ? 'bg-white border-amber-200' : 'bg-[#0b0c15] border-white/5'}`}>
         <div className={`absolute inset-0 pointer-events-none opacity-5 transition-opacity duration-1000 bg-gradient-to-br ${accentClasses.gradient}`}></div>
 
-        {/* Toast Notification for UI feedback */}
         {toast && (
           <div className="absolute top-10 right-10 z-[110] bg-green-900/90 border border-green-400 text-white px-6 py-2 rounded-full shadow-2xl animate-fade-in-up font-bold text-xs">
             {toast}
@@ -213,12 +203,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
         )}
 
         {!isSuccess && (
-          <button 
-            onClick={onClose} 
-            className={`absolute top-8 right-8 p-2 text-2xl transition-all z-10 hover:rotate-90 ${
-              isLight ? 'text-amber-800/40 hover:text-black' : 'text-amber-500/30 hover:text-white'
-            }`}
-          >
+          <button onClick={onClose} className={`absolute top-8 right-8 p-2 text-2xl transition-all z-10 hover:rotate-90 ${isLight ? 'text-amber-800/40 hover:text-black' : 'text-amber-500/30 hover:text-white'}`}>
             ✕
           </button>
         )}
@@ -227,7 +212,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
           {isSuccess ? (
             <div className="animate-fade-in-up flex flex-col items-center">
               <div className="relative mb-10">
-                <div className={`w-32 h-32 bg-[#10b981] rounded-full flex items-center justify-center shadow-2xl animate-bounce border-4 border-white/20`}>
+                <div className="w-32 h-32 bg-[#10b981] rounded-full flex items-center justify-center shadow-2xl animate-bounce border-4 border-white/20">
                   <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
@@ -248,44 +233,22 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
                 Sacred Exchange Portal
               </p>
 
-              <div className={`mb-8 p-8 rounded-[2rem] border relative transition-all duration-500 shadow-inner group ${
-                isLight ? 'bg-amber-50/50 border-amber-100' : 'bg-black/40 border-white/5'
-              }`}>
+              <div className={`mb-8 p-8 rounded-[2rem] border relative transition-all duration-500 shadow-inner group ${isLight ? 'bg-amber-50/50 border-amber-100' : 'bg-black/40 border-white/5'}`}>
                 <div className="absolute top-4 right-6">
-                  <select 
-                    value={currency} 
-                    onChange={(e) => setCurrency(e.target.value as Currency)}
-                    className={`text-[9px] rounded-full border px-3 py-1.5 outline-none font-black cursor-pointer transition-all uppercase tracking-widest ${
-                      isLight ? 'bg-white border-amber-200 text-amber-900' : 'bg-gray-800 border-white/10 text-amber-200'
-                    }`}
-                  >
+                  <select value={currency} onChange={(e) => setCurrency(e.target.value as Currency)} className={`text-[9px] rounded-full border px-3 py-1.5 outline-none font-black cursor-pointer transition-all uppercase tracking-widest ${isLight ? 'bg-white border-amber-200 text-amber-900' : 'bg-gray-800 border-white/10 text-amber-200'}`}>
                     {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
-                <span className={`font-cinzel font-black text-6xl block pt-4 tracking-tighter drop-shadow-xl transition-transform duration-500 group-hover:scale-110 ${
-                  isLight ? 'text-amber-950' : 'text-white'
-                }`}>
+                <span className={`font-cinzel font-black text-6xl block pt-4 tracking-tighter drop-shadow-xl transition-transform duration-500 group-hover:scale-110 ${isLight ? 'text-amber-950' : 'text-white'}`}>
                   {priceDisplay.display}
                 </span>
               </div>
 
-              <div className={`flex p-1.5 rounded-[1.5rem] mb-6 border shadow-sm ${
-                isLight ? 'bg-amber-50 border-amber-100' : 'bg-black/60 border-white/5'
-              }`}>
-                <button 
-                  onClick={() => setPaymentMethodTab('upi')} 
-                  className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-[0.2em] ${
-                    paymentMethodTab === 'upi' ? (`${accentClasses.bg} text-white shadow-xl`) : (isLight ? 'text-amber-800/30' : 'text-gray-600')
-                  }`}
-                >
+              <div className={`flex p-1.5 rounded-[1.5rem] mb-6 border shadow-sm ${isLight ? 'bg-amber-50 border-amber-100' : 'bg-black/60 border-white/5'}`}>
+                <button onClick={() => setPaymentMethodTab('upi')} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-[0.2em] ${paymentMethodTab === 'upi' ? `${accentClasses.bg} text-white shadow-xl` : isLight ? 'text-amber-800/30' : 'text-gray-600'}`}>
                   UPI
                 </button>
-                <button 
-                  onClick={() => setPaymentMethodTab('card')} 
-                  className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-[0.2em] ${
-                    paymentMethodTab === 'card' ? (`${accentClasses.bg} text-white shadow-xl`) : (isLight ? 'text-amber-800/30' : 'text-gray-600')
-                  }`}
-                >
+                <button onClick={() => setPaymentMethodTab('card')} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-[0.2em] ${paymentMethodTab === 'card' ? `${accentClasses.bg} text-white shadow-xl` : isLight ? 'text-amber-800/30' : 'text-gray-600'}`}>
                   Card
                 </button>
               </div>
@@ -297,33 +260,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
                       const normalizedName = method.name.toLowerCase().trim();
                       const fallback = LOCAL_UPI_LOGOS[normalizedName] || '';
                       const logoUrl = method.logo_url && method.logo_url.trim() !== '' ? method.logo_url : fallback;
-                      
+
                       return (
-                        <button 
-                          key={method.id} 
-                          onClick={() => handleMethodClick(method)} 
-                          className={`flex flex-col items-center gap-2 group cursor-pointer transition-all active:scale-90 p-2 border-2 rounded-2xl ${
-                            selectedMethod?.id === method.id 
-                              ? 'border-orange-500 bg-orange-50/10' 
-                              : 'border-transparent'
-                          }`}
-                          disabled={isLoading}
-                        >
-                          <div className={`w-14 h-14 flex items-center justify-center bg-white rounded-2xl p-2.5 transition-all shadow-md overflow-hidden ${
-                            isLight ? 'border-amber-100 group-hover:border-amber-600' : 'group-hover:border-amber-500/50 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]'
-                          }`}>
-                            <OptimizedImage 
-                              src={logoUrl} 
-                              alt={method.name} 
-                              className="w-full h-full object-contain" 
-                              containerClassName="w-full h-full"
-                              showSkeleton={true}
-                              fallbackSrc={fallback}
-                            />
+                        <button key={method.id} onClick={() => handleMethodClick(method)} className={`flex flex-col items-center gap-2 group cursor-pointer transition-all active:scale-90 p-2 border-2 rounded-2xl ${selectedMethod?.id === method.id ? 'border-orange-500 bg-orange-50/10' : 'border-transparent'}`} disabled={isLoading}>
+                          <div className={`w-14 h-14 flex items-center justify-center bg-white rounded-2xl p-2.5 transition-all shadow-md overflow-hidden ${isLight ? 'border-amber-100 group-hover:border-amber-600' : 'group-hover:border-amber-500/50 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]'}`}>
+                            <OptimizedImage src={logoUrl} alt={method.name} className="w-full h-full object-contain" containerClassName="w-full h-full" showSkeleton={true} fallbackSrc={fallback} />
                           </div>
-                          <span className={`text-[8px] font-black uppercase tracking-tighter transition-colors ${
-                            isLight ? 'text-amber-900/40 group-hover:text-amber-900' : 'text-gray-600 group-hover:text-amber-200'
-                          }`}>
+                          <span className={`text-[8px] font-black uppercase tracking-tighter transition-colors ${isLight ? 'text-amber-900/40 group-hover:text-amber-900' : 'text-gray-600 group-hover:text-amber-200'}`}>
                             {method.name}
                           </span>
                         </button>
@@ -332,14 +275,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
                       <div className="col-span-full py-4 text-xs opacity-50 italic text-center">No UPI methods found in registry.</div>
                     )}
                   </div>
-                  
+
                   <div className="space-y-4">
                     {errorMsg && <p className="text-red-500 text-[10px] font-bold uppercase">{errorMsg}</p>}
-                    
-                    <button 
-                      onClick={handleScanQRClick} 
-                      className={`w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-black uppercase tracking-[0.3em] text-[9px] rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2`}
-                    >
+
+                    <button onClick={handleScanQRClick} className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-black uppercase tracking-[0.3em] text-[9px] rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
                       {showQrCode ? 'Hide QR Code' : 'Scan QR Code to Pay'}
                     </button>
@@ -347,57 +287,37 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
                     {showQrCode && selectedMethod?.qr_code_url && (
                       <Card className="p-6 bg-white border-2 border-orange-500 animate-fade-in-up">
                         <div className="flex flex-col items-center">
-                           <h4 className="text-amber-900 font-cinzel font-black text-sm uppercase mb-4">Scan to Pay {priceDisplay.display}</h4>
-                           <div className="w-64 h-64 border-4 border-gray-100 rounded-2xl overflow-hidden shadow-inner p-2 bg-white">
-                              {/* Cache-busting with Date.now() as requested */}
-                              <img 
-                                src={`${selectedMethod.qr_code_url}?t=${Date.now()}`} 
-                                alt="Payment QR" 
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                    e.currentTarget.src = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(`upi://pay?pa=${selectedMethod.upi_id || 'business@okaxis'}&pn=GlyphCircle&am=${priceDisplay.price}&cu=${currency}`);
-                                }}
-                              />
-                           </div>
-                           
-                           {selectedMethod.upi_id && (
-                             <div className="mt-4 flex flex-col items-center">
-                                <p className="text-[10px] text-gray-500 font-black uppercase mb-1">VPA Identifier</p>
-                                <div className="flex items-center gap-3">
-                                    <code className="text-xs font-mono bg-gray-100 px-3 py-1 rounded text-gray-700">{selectedMethod.upi_id}</code>
-                                    <button 
-                                        onClick={() => { navigator.clipboard.writeText(selectedMethod.upi_id!); showToast("ID Copied"); }}
-                                        className="text-orange-600 text-[10px] font-bold uppercase underline"
-                                    >Copy</button>
-                                </div>
-                             </div>
-                           )}
-                           
-                           <div className="mt-8 w-full border-t border-gray-100 pt-6 text-left">
-                              <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">Transaction ID / Ref #</label>
-                              <div className="flex gap-2">
-                                <input 
-                                  value={transactionId}
-                                  onChange={e => setTransactionId(e.target.value)}
-                                  placeholder="Enter Ref Number"
-                                  className="flex-grow p-3 border rounded-xl text-sm font-mono outline-none focus:border-orange-500 text-gray-800 bg-white"
-                                />
-                                <button 
-                                  onClick={() => handleInitiatePayment('qr_verification')}
-                                  disabled={transactionId.length < 5 || isLoading}
-                                  className="px-6 bg-green-600 text-white font-black text-[10px] rounded-xl uppercase disabled:opacity-50"
-                                >Verify</button>
+                          <h4 className="text-amber-900 font-cinzel font-black text-sm uppercase mb-4">Scan to Pay {priceDisplay.display}</h4>
+                          <div className="w-64 h-64 border-4 border-gray-100 rounded-2xl overflow-hidden shadow-inner p-2 bg-white">
+                            <img src={`${selectedMethod.qr_code_url}?t=${Date.now()}`} alt="Payment QR" className="w-full h-full object-contain" onError={(e) => {
+                              e.currentTarget.src = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(`upi://pay?pa=${selectedMethod.upi_id || 'business@okaxis'}&pn=GlyphCircle&am=${priceDisplay.price}&cu=${currency}`);
+                            }} />
+                          </div>
+
+                          {selectedMethod.upi_id && (
+                            <div className="mt-4 flex flex-col items-center">
+                              <p className="text-[10px] text-gray-500 font-black uppercase mb-1">VPA Identifier</p>
+                              <div className="flex items-center gap-3">
+                                <code className="text-xs font-mono bg-gray-100 px-3 py-1 rounded text-gray-700">{selectedMethod.upi_id}</code>
+                                <button onClick={() => { navigator.clipboard.writeText(selectedMethod.upi_id!); showToast("ID Copied"); }} className="text-orange-600 text-[10px] font-bold uppercase underline">Copy</button>
                               </div>
-                              <p className="text-[8px] text-gray-400 mt-2 italic">Provide the 12-digit UPI reference number after payment.</p>
-                           </div>
+                            </div>
+                          )}
+
+                          <div className="mt-8 w-full border-t border-gray-100 pt-6 text-left">
+                            <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">Transaction ID / Ref #</label>
+                            <div className="flex gap-2">
+                              <input value={transactionId} onChange={e => setTransactionId(e.target.value)} placeholder="Enter Ref Number" className="flex-grow p-3 border rounded-xl text-sm font-mono outline-none focus:border-orange-500 text-gray-800 bg-white" />
+                              <button onClick={() => handleInitiatePayment('qr_verification')} disabled={transactionId.length < 5 || isLoading} className="px-6 bg-green-600 text-white font-black text-[10px] rounded-xl uppercase disabled:opacity-50">Verify</button>
+                            </div>
+                            <p className="text-[8px] text-gray-400 mt-2 italic">Provide the 12-digit UPI reference number after payment.</p>
+                          </div>
                         </div>
                       </Card>
                     )}
 
                     <div className={`pt-4 border-t ${isLight ? 'border-amber-100' : 'border-white/5'}`}>
-                      <button className={`w-full py-4 border rounded-2xl text-[9px] font-black transition-all uppercase tracking-[0.3em] ${
-                        isLight ? 'bg-white border-amber-200 text-amber-900/60 hover:text-amber-900' : 'bg-gray-900 border-gray-800 text-amber-200/40 hover:text-white'
-                      }`}>
+                      <button className={`w-full py-4 border rounded-2xl text-[9px] font-black transition-all uppercase tracking-[0.3em] ${isLight ? 'bg-white border-amber-200 text-amber-900/60 hover:text-amber-900' : 'bg-gray-900 border-gray-800 text-amber-200/40 hover:text-white'}`}>
                         Pay via Manual UPI ID
                       </button>
                     </div>
@@ -405,13 +325,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isVisible, onClose, onSucce
                 </div>
               ) : (
                 <div className="animate-fade-in-up pt-4">
-                  <Button 
-                    onClick={() => handleInitiatePayment('card')} 
-                    disabled={isLoading} 
-                    className={`w-full border-none shadow-2xl py-6 font-black uppercase tracking-[0.3em] text-[10px] rounded-2xl transform hover:scale-[1.02] active:scale-95 transition-all ${
-                      isLight ? 'bg-amber-950 text-white hover:bg-black' : `${accentClasses.bg} text-white`
-                    }`}
-                  >
+                  <Button onClick={() => handleInitiatePayment('card')} disabled={isLoading} className={`w-full border-none shadow-2xl py-6 font-black uppercase tracking-[0.3em] text-[10px] rounded-2xl transform hover:scale-[1.02] active:scale-95 transition-all ${isLight ? 'bg-amber-950 text-white hover:bg-black' : `${accentClasses.bg} text-white`}`}>
                     {isLoading ? 'Contacting Astral Bank...' : 'Authorize Card Manifestation'}
                   </Button>
                 </div>

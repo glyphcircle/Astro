@@ -31,47 +31,13 @@
   --color-primary-glow: #A68B5B;
 }
 
-/* Color Variant: Blue */
-[data-color='blue'] {
-  --color-text-accent: #4A9EFF;
-  --color-primary-glow: #2E7DD6;
-  --color-border: rgba(74, 158, 255, 0.3);
-}
-
-/* Color Variant: Purple */
-[data-color='purple'] {
-  --color-text-accent: #A855F7;
-  --color-primary-glow: #7C3AED;
-  --color-border: rgba(168, 85, 247, 0.3);
-}
-
-/* Color Variant: Green */
-[data-color='green'] {
-  --color-text-accent: #10B981;
-  --color-primary-glow: #059669;
-  --color-border: rgba(16, 185, 129, 0.3);
-}
-
-/* Color Variant: Orange */
-[data-color='orange'] {
-  --color-text-accent: #F97316;
-  --color-primary-glow: #EA580C;
-  --color-border: rgba(249, 115, 22, 0.3);
-}
-
-/* Color Variant: Red */
-[data-color='red'] {
-  --color-text-accent: #EF4444;
-  --color-primary-glow: #DC2626;
-  --color-border: rgba(239, 68, 68, 0.3);
-}
-
-/* Color Variant: Teal */
-[data-color='teal'] {
-  --color-text-accent: #14B8A6;
-  --color-primary-glow: #0D9488;
-  --color-border: rgba(20, 184, 166, 0.3);
-}
+/* Color Variants */
+[data-color='blue'] { --color-text-accent: #4A9EFF; --color-primary-glow: #2E7DD6; --color-border: rgba(74, 158, 255, 0.3); }
+[data-color='purple'] { --color-text-accent: #A855F7; --color-primary-glow: #7C3AED; --color-border: rgba(168, 85, 247, 0.3); }
+[data-color='green'] { --color-text-accent: #10B981; --color-primary-glow: #059669; --color-border: rgba(16, 185, 129, 0.3); }
+[data-color='orange'] { --color-text-accent: #F97316; --color-primary-glow: #EA580C; --color-border: rgba(249, 115, 22, 0.3); }
+[data-color='red'] { --color-text-accent: #EF4444; --color-primary-glow: #DC2626; --color-border: rgba(239, 68, 68, 0.3); }
+[data-color='teal'] { --color-text-accent: #14B8A6; --color-primary-glow: #0D9488; --color-border: rgba(20, 184, 166, 0.3); }
 
 body {
   background-color: var(--color-bg-base);
@@ -82,34 +48,63 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Accessibility Focus Styles */
-:focus {
-  outline: none;
+/* 💠 INTERACTIVE MYSTIC CARD HOVER ENGINE */
+.mystic-interactive-element {
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  z-index: 1;
 }
 
-:focus-visible {
-  outline: 3px solid var(--color-text-accent);
-  outline-offset: 3px;
-  box-shadow: 0 0 10px var(--color-primary-glow);
-  transition: outline-offset 0.2s ease;
+/* Light Sweep Pseudo-element */
+.mystic-interactive-element::after {
+  content: '';
+  position: absolute;
+  top: -150%;
+  left: -150%;
+  width: 400%;
+  height: 400%;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(255, 255, 255, 0.05) 48%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.05) 52%,
+    transparent 55%
+  );
+  transform: rotate(-45deg);
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 2;
 }
 
-/* Removed global opacity that made elements look blurry */
+.mystic-interactive-element:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6), 
+              0 0 40px -5px var(--color-primary-glow);
+  border-color: var(--color-text-accent) !important;
+}
+
+.mystic-interactive-element:hover::after {
+  top: -100%;
+  left: -100%;
+  opacity: 1;
+}
+
+/* Specific feedback for icons inside interactive elements */
+.mystic-interactive-element:hover .sacred-circle-icon {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 0 30px var(--color-primary-glow);
+}
+
 .imperial-card,
 .sacred-boundary,
 div[role="button"],
 button {
-  transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
-  image-rendering: -webkit-optimize-contrast;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.imperial-card:hover,
-button:hover,
-a:hover {
-  transform: translateY(-4px);
-}
-
-/* 🔱 SACRED APPLICATION BOUNDARY */
 #root>div {
   position: relative;
   border: 12px double var(--color-border);
@@ -117,80 +112,21 @@ a:hover {
   box-sizing: border-box;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-text-accent); opacity: 0.3; border-radius: 10px; }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-}
+.perspective-1000 { perspective: 1000px; }
+.transform-style-3d { transform-style: preserve-3d; }
+.backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.rotate-y-180 { transform: rotateY(180deg); }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--color-text-accent);
-  opacity: 0.3;
-  border-radius: 10px;
-}
+::selection { background: var(--color-primary-glow); color: #fff; }
 
-.perspective-1000 {
-  perspective: 1000px;
-}
+@keyframes float-gentle { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
+.animate-float-gentle { animation: float-gentle 4s ease-in-out infinite; }
 
-.transform-style-3d {
-  transform-style: preserve-3d;
-}
-
-.backface-hidden {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-.rotate-y-180 {
-  transform: rotateY(180deg);
-}
-
-::selection {
-  background: var(--color-primary-glow);
-  color: #fff;
-}
-
-@keyframes float-gentle {
-
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-.animate-float-gentle {
-  animation: float-gentle 4s ease-in-out infinite;
-}
-
-.feature-image-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, var(--color-bg-base) 0%, var(--color-bg-surface) 100%);
-  overflow: hidden;
-}
-
-.dynamic-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.group:hover .dynamic-image {
-  transform: scale(1.08);
-}
-
-.pb-safe {
-  padding-bottom: calc(4rem + var(--safe-bottom));
-}
+.pb-safe { padding-bottom: calc(4rem + var(--safe-bottom)); }
 
 .gold-gradient-text {
   background: linear-gradient(to bottom, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
@@ -198,133 +134,23 @@ a:hover {
   -webkit-text-fill-color: transparent;
 }
 
-/* Target specific accent text to use the CSS variable */
-.text-skin-accent {
-  color: var(--color-text-accent) !important;
-}
+@keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; height: 0; padding: 0; margin: 0; } }
+.animate-fade-out { animation: fadeOut 5s ease-in-out forwards; }
+
+@keyframes spin-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+.animate-spin-reverse { animation: spin-reverse 1.5s linear infinite; }
 
 @media print {
-  .no-print {
-    display: none !important;
-  }
-
-  body {
-    background: white !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  @page {
-    size: A4;
-    margin: 0;
-  }
+  button, .no-print, [role="button"], .download-button { display: none !important; }
+  .section-container { page-break-inside: avoid; break-inside: avoid; }
 }
 
-@keyframes fadeOut {
-  0% {
-    opacity: 1;
-  }
+html { scroll-behavior: smooth; }
 
-  70% {
-    opacity: 1;
-  }
+@keyframes highlight-fade { 0% { background-color: rgba(251, 191, 36, 0.2); } 100% { background-color: transparent; } }
+.animate-fade-in-up { scroll-margin-top: 120px; }
 
-  100% {
-    opacity: 0;
-    height: 0;
-    padding: 0;
-    margin: 0;
-  }
-}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade-in { animation: fade-in 0.3s ease-in-out; }
 
-.animate-fade-out {
-  animation: fadeOut 5s ease-in-out forwards;
-}
-
-/* --- PRICING SECTION ALIGNMENT FIXES --- */
-.pricing-section-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
-  align-items: stretch;
-}
-
-.pricing-card-layout {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.pricing-card-content-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.pricing-card-button-footer {
-  margin-top: auto;
-}
-
-@keyframes spin-reverse {
-  from {
-    transform: rotate(360deg);
-  }
-
-  to {
-    transform: rotate(0deg);
-  }
-}
-
-.animate-spin-reverse {
-  animation: spin-reverse 1.5s linear infinite;
-}
-
-/* PDF Styles */
-@media print {
-
-  button,
-  .no-print,
-  [role="button"],
-  .download-button {
-    display: none !important;
-  }
-
-  .section-container {
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-}
-
-/* Smooth scroll behavior */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Add some breathing room when scrolling to sections */
-.report-preview,
-.payment-section {
-  scroll-margin-top: 100px;
-  /* Space from top of viewport */
-}
-
-/* Highlight section when scrolled to */
-.report-preview:target,
-.payment-section:target {
-  animation: highlight-fade 2s ease;
-}
-
-@keyframes highlight-fade {
-  0% {
-    background-color: rgba(251, 191, 36, 0.2);
-  }
-
-  100% {
-    background-color: transparent;
-  }
-}
-
-/* Add to your global CSS or component CSS */
-.animate-fade-in-up {
-  scroll-margin-top: 120px;
-  /* Adjust based on your header height */
-}
+body.modal-open { overflow: hidden; }
